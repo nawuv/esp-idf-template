@@ -24,8 +24,10 @@ nav:
       - Create Your Project: getting-started/create-project.md
       - Build and Run: getting-started/build-and-run.md
       - Troubleshooting: getting-started/troubleshooting.md
+      - Hardware and MQTT: hardware-mqtt.md
   - Architecture:
       - Overview: architecture.md
+      - Code Walkthrough: code-walkthrough.md
       - Board Porting: board-porting.md
       - Safety: safety.md
       - MQTT Contract: mqtt-contract.md
@@ -38,9 +40,12 @@ nav:
   - Testing: testing.md
   - Project:
       - Contributing: contributing.md
+      - Fork Workflow: development-workflow.md
       - Releases and Branches: releases.md
       - Repository Setup: repository-setup.md
       - Roadmap: roadmap.md
       - Decisions:
           - Portable Control: decisions/0001-portable-control-and-simulation.md
           - Injected Workers: decisions/0002-injected-workers-and-composition.md
+          - Layered Components: decisions/0003-layered-components.md
+          - Portable Component API: decisions/0004-portable-component-api.md

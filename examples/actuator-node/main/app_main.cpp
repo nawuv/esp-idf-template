@@ -1,24 +1,25 @@
+#include "application/workers.hpp"
+#include "drivers/simulated_output.hpp"
+#include "drivers/synthetic_sensor.hpp"
 #include "esp_log.h"
-#include "espkit/actuators/simulated_output.hpp"
-#include "espkit/application/workers.hpp"
-#include "espkit/runtime/adapters.hpp"
-#include "espkit/sensors/synthetic_sensor.hpp"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "platform/clock.hpp"
+#include "platform/snapshot.hpp"
 
 #include <cstdlib>
 
 namespace {
 
 constexpr float demo_sensor_value = 42.0F;
-constexpr espkit::Milliseconds max_run_ms = 1000;
-constexpr espkit::Milliseconds max_sample_age_ms = 500;
+constexpr domain::Milliseconds max_run_ms = 1000;
+constexpr domain::Milliseconds max_sample_age_ms = 500;
 constexpr unsigned step_period_ms = 100;
 
-class LocalEnableRequest final : public espkit::RequestSource {
+class LocalEnableRequest final : public application::RequestSource {
     public:
     // Intentionally keeps requesting ON to demonstrate the latched runtime limit.
-    bool enable_requested(espkit::Milliseconds) noexcept override {
+    bool enable_requested(domain::Milliseconds) noexcept override {
         return true;
     }
 };
@@ -26,15 +27,16 @@ class LocalEnableRequest final : public espkit::RequestSource {
 } // namespace
 
 extern "C" void app_main() {
-    static espkit::EspClock clock;
-    static espkit::SyntheticSensor sensor(demo_sensor_value);
-    static espkit::SimulatedOutput output;
+    static platform::EspClock clock;
+    static drivers::SyntheticSensor sensor(demo_sensor_value);
+    static drivers::SimulatedOutput output;
     static LocalEnableRequest requests;
-    static espkit::FreeRtosSnapshot<espkit::Reading> readings;
-    static espkit::FreeRtosSnapshot<espkit::Telemetry> telemetry;
-    static espkit::TimedOutput policy({max_run_ms, max_sample_age_ms});
-    static espkit::SensorWorker sampler(sensor, clock, readings);
-    static espkit::ControlWorker controller(policy, clock, readings, requests, output, telemetry);
+    static platform::FreeRtosSnapshot<domain::Reading> readings;
+    static platform::FreeRtosSnapshot<domain::Telemetry> telemetry;
+    static domain::TimedOutput policy({max_run_ms, max_sample_age_ms});
+    static application::SensorWorker sampler(sensor, clock, readings);
+    static application::ControlWorker controller(policy, clock, readings, requests, output,
+                                                 telemetry);
     if (!readings.ready() || !telemetry.ready()) {
         std::abort();
     }
@@ -45,7 +47,7 @@ extern "C" void app_main() {
     for (;;) {
         sampler.step();
         controller.step();
-        espkit::Telemetry status{};
+        domain::Telemetry status{};
         if (telemetry.latest(status)) {
             ESP_LOGI("actuator_node", "output=%d fault=%d", output.enabled(), status.fault);
         }

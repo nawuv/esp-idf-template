@@ -1,104 +1,135 @@
 # Architecture
 
-## Public naming
+ESPKit separates portable device behavior from SDK adapters and product wiring.
+Start with [Code walkthrough](code-walkthrough.md) for the execution order.
 
-The project is named ESPKit. Public C++ symbols use the `espkit` root namespace,
-and headers use `espkit/<component>/...` paths. The GitHub repository slug is
-independent of this API name. Example: `espkit/application/timed_output.hpp`.
+## Names and directories
+
+Project components use their responsibility as their name. A component is a
+build/dependency boundary; a namespace is a C++ name boundary. Public headers
+mirror their owning namespace. Check for SDK component collisions when adding names.
+
+| Component | Namespace | Responsibility |
+| --- | --- | --- |
+| `domain` | `domain` | Measurements, status, and timed-output safety policy |
+| `application` | `application` | Portable ports and single-step workers |
+| `drivers` | `drivers` | Synthetic/SHT3x inputs and simulated output |
+| `platform` | `platform` | ESP-IDF I2C, monotonic clock, FreeRTOS queues/tasks, log sink |
+| `configuration` | `configuration` | Network settings validation and NVS loading |
+| `networking` | `networking` | Wi-Fi lifecycle, MQTT telemetry, and connection coordination |
+| `main/` | `device` | Product selection, board settings, task budgets, and object wiring |
+
+For example, `drivers::Sht3xSensor` is declared in
+`components/drivers/include/drivers/sht3x.hpp`.
+Header paths use `application/...`. Kconfig symbols retain `ESPKIT_` because
+they share a global configuration namespace; the stored NVS namespace remains
+`espkit` to preserve provisioned settings.
+Avoid generic `core`, `utils`, and `common` buckets. Do not add a component or a
+namespace for each class. Split components when independent reuse or dependencies
+justify a new build boundary.
 
 ## Dependency direction
 
 ```text
-main -> composition -> application -> core
-                    -> sensors / actuators -> core
-                    -> runtime -> core + ESP-IDF / FreeRTOS
+main (composition root)
+  ├── drivers ──────────┐
+  ├── platform ─────────┤
+  ├── networking ───────┤──> application ──> domain
+  │      └── configuration (independent settings adapter)
+  └── domain / application
 ```
 
-`composition` is the only production location that selects concrete dependencies.
-`application` and `core` have no ESP-IDF or FreeRTOS headers. `runtime` knows how to
-run a `Work` object but does not know which sensor, controller, or product it runs.
-Public dependencies belong in `REQUIRES`; private ones in `PRIV_REQUIRES`.
+Domain, application, and drivers contain no ESP-IDF/FreeRTOS headers. Domain
+has no dependency on application. Ports belong to the application that consumes
+them, not to the SDK implementation. Platform, networking, and configuration
+must not depend on each other except networking's explicit configuration dependency.
+Public dependencies use CMake `REQUIRES`; implementation-only ones use `PRIV_REQUIRES`.
+Run `python3 tools/check_architecture.py`; CI checks owned include and component edges.
+This is a lightweight boundary check, not a general C++ dependency analyzer.
 
-## Construction and dependency injection
+## Patterns
 
-`app_main()` calls `start_device()`. Its function-local static `Device` constructs
-queues, adapters, policies, workers, and task runners after ESP-IDF startup. Member
-order follows dependency lifetime: dependencies are constructed before borrowers.
-All objects remain alive while tasks execute. Startup is one-shot; a second call
-aborts. Shutdown/restart of individual task runners is not supported yet.
-
-Workers receive borrowed references through constructors:
-
-- `SensorWorker`: `SensorSource`, `Clock`, and a reading writer.
-- `ControlWorker`: policy, clock, reading reader, requests, output, and status writer.
-- `ReporterWorker`: status reader and reporting sink.
-
-No worker constructs a driver or looks up global services. The template does not
-need a DI container, singleton service registry, or dynamic plugin framework.
-
-## Patterns and boundaries
-
-| Pattern | Application |
+| Pattern | Concrete use |
 | --- | --- |
-| Constructor injection / DIP | Workers depend on portable ports |
-| Composition root | `composition/src/device.cpp` selects and owns implementations |
-| Adapter | ESP clock, FreeRTOS snapshots, serial log sink, simulation drivers |
-| Producer-consumer | Sensor/control/reporter exchange bounded snapshots |
-| State machine | `TimedOutput` transitions between off, running, and fault |
+| Constructor injection | Workers borrow sensor, output, clock, and snapshot ports |
+| Composition root | `main/device.cpp` selects and owns concrete implementations |
+| Adapter | ESP-IDF I2C/clock and FreeRTOS implement portable application ports |
+| Strategy | Sensor/output ports allow synthetic and physical implementations |
+| State machine | `domain::TimedOutput` explicitly tracks off/running/fault |
+| Producer-consumer | Bounded latest-value queues connect workers |
 
-`Work::step()` performs one iteration. `PeriodicTask` supplies scheduling. This
-separates work from FreeRTOS and lets host tests run deterministic single steps.
-A second control algorithm may justify a Strategy interface; do not introduce one
-until a concrete alternate policy exists.
+No DI container, service locator, Singleton, generic event bus, or factory hierarchy
+is required. A replaceable control-policy interface should wait until a second
+policy needs it. Network coordination uses an explicit state enum rather than
+one dynamically allocated object per state.
 
-## Execution
+## Lifetime and concurrency
 
-Sensor sampling defaults to 500 ms, control to 100 ms, and reporting to 2000 ms.
-Two length-one FreeRTOS queues transfer trivially copyable latest-value snapshots.
-Readers do not remove data. Overwrite is intentional: this is not an event history
-or a command FIFO. Split reader and writer ports limit what each consumer can do.
+`app_main()` calls `device::start_device()`. A function-local static `DeviceRuntime`
+constructs after SDK startup. Members are declared before objects borrowing them.
+The runtime is boot-lifetime and startup is one-shot. Individual service shutdown,
+restart, and resource recovery after partial SDK initialization are not supported.
+This constraint is explicit; these adapters are not general-purpose restartable services.
 
-Composition seeds a sensor reading and runs one safe control step before starting
-tasks. The default request source always returns false. No GPIO or networking is
-used. Task stack sizes/priorities need hardware measurement; no core affinity is
-required. Allocation happens during startup, not in periodic production workers.
-Clock, sensor, request, output, and queue operations used by control must be bounded.
+Sensor (500 ms), control (100 ms), and reporter (2000 ms) workers run independently.
+Two length-one FreeRTOS queues carry latest-value snapshots; reads do not consume
+them. Overwrite is intentional. Commands need a separate bounded FIFO and rejection
+semantics. Startup seeds a reading and applies safe OFF before tasks start.
 
-## Output state and errors
+Before any tasks start, the composition root loads validated settings through
+`configuration::NvsConfigStore` and passes a copy to `NetworkService::configure()`.
+Only the network task calls `NetworkService::step()`. It steps `WifiStation`, waits
+for injected `NetworkTime` readiness, then starts `MqttTelemetry`. The service
+uses portable connection ports; `SntpTime` owns the SDK time-sync calls.
+The reporter calls `NetworkService::report()`, which gates transmission on Wi-Fi
+state and delegates to MQTT. Wi-Fi and MQTT callbacks update atomic adapter state;
+retry timing and initialization state belong to the network worker. MQTT's callback
+also enqueues retained online availability. MQTT config references remain valid
+because `NetworkService` owns its settings for the boot lifetime.
 
-`TimedOutput` validates input and deadlines. OFF transitions to running only for
-a valid enable request. Invalid input or maximum runtime expiry latches fault.
-Repeated ON requests do not reset the deadline. OFF/ON cycles start a new interval;
-product rules still need cooldown and duty-cycle limits where required.
+Control never calls networking. Telemetry uses bounded nonblocking enqueue with
+QoS 0 and no offline backlog. Sensor bus waits remain on the sensor task. Task
+budgets require hardware measurement; compilation is not timing validation.
 
-`ControlWorker` applies the decision. On output failure it latches a policy fault
-and attempts OFF. If OFF fails, status is `AppliedOutput::unknown`, not confirmed
-OFF. `AppliedOutput` represents adapter acknowledgement, not physical feedback.
-The original enable request is reported separately from applied output.
+## Safety and status
 
-Fault reset is an internal trusted operation, not an exposed network command.
-The next step revalidates input. Nothing here stops hardware if the control task
-stalls: independent interlocks/watchdogs are a separate hardware requirement.
+`TimedOutput` rejects invalid/stale input and maximum runtime expiry, latching a
+fault. Repeated ON requests cannot extend an interval. The worker applies the
+policy decision; output errors latch fault and trigger a best-effort OFF. Failed
+OFF is reported as unknown, not confirmed OFF. Applied status is software
+acknowledgement, not physical feedback. Cooldowns, duty limits, independent
+interlocks, and hardware watchdog behavior are product responsibilities.
 
-## Constants and configuration
+Physical outputs and remote commands remain disabled. Log status identifies sensor
+origin separately from the simulated output mode. See [Safety](safety.md).
 
-Keep named `inline constexpr` values close to the component that owns their meaning:
+## Constants and settings
 
-- `application/constants.hpp`: default runtime and sample-age safety limits.
-- `composition/constants.hpp`: device sampling/reporting periods and synthetic value.
-- `runtime/constants.hpp`: task stacks/priorities, queue capacity, unit conversions.
+- `main/device_config.hpp`: sampling periods, task stacks/priorities, and selected policy.
+- `main/boards/esp32s3/board_config.hpp`: GPIO and bus settings, exposed by `main/Kconfig.projbuild`.
+- `domain/policy_defaults.hpp`: reusable safe-policy defaults, overridable through `OutputPolicy`.
+- `platform/constants.hpp`: queue capacity and time conversions, not deployment task budgets.
+- Driver `.cpp` files: fixed protocol commands, CRC values, and timing requirements.
+- Runtime NVS: validated network credentials and identity; see [Hardware and MQTT](hardware-mqtt.md).
 
-Use units in names. Policy values remain constructor parameters so another device
-can inject different validated settings. Do not move every zero, boolean, test
-fixture value, or protocol example into a global constants file. Future persisted
-configuration will be validated and bounded before replacing defaults.
+Use units in names. Configuration objects express values that vary by device;
+constants express fixed protocol/library rules. Do not collect every literal into
+one global constants file. NVS storage is not automatically encrypted.
 
-## Coding conventions
+## Conventions and evolution
 
-Use C++20, `PascalCase` types, `snake_case` functions/files, trailing underscores for
-private fields, and English comments/docs. Prefer RAII and explicit ownership.
-Exceptions/RTTI remain disabled. Use monotonic local time for safety deadlines.
-Never use `volatile` for task synchronization. Run `python3 tools/format.py` with
-clang-format 18; CI checks the same formatting rules.
+Use C++20, `PascalCase` types, `snake_case` functions/files, trailing underscores
+for fields, and English comments/docs. Public headers have no `using namespace`
+directives; local aliases are acceptable in composition `.cpp` files. Use RAII
+where lifetime is supported, borrowed references for injected dependencies, and
+monotonic time for safety. Run `python3 tools/format.py` with clang-format 18.
 
-For distributed extensions, see [Cluster and swarm evolution](distributed-systems.md).
+See [ADR 0004](decisions/0004-portable-component-api.md) for migration details and
+[Cluster and swarm evolution](distributed-systems.md) for future boundaries.
+
+## Host build
+
+Host tests add the component directories with `add_subdirectory()` and link their
+library targets. Each component declares its portable sources once for both builds;
+ESP-IDF adds SDK adapter sources. Configuration validation and network coordination
+are included in the portable host targets.

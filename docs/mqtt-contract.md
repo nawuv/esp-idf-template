@@ -1,6 +1,8 @@
 # MQTT contract proposal
 
-Status: design only; no MQTT client or Wi-Fi implementation is included yet.
+Status: telemetry and availability publishing are implemented by the optional
+Wi-Fi/MQTT adapter. Command execution and command-result topics remain design only.
+See [Hardware and MQTT](hardware-mqtt.md) for configuration and validation limits.
 
 ## Topics
 

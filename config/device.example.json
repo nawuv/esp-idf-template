@@ -1,0 +1,9 @@
+{
+  "wifi_ssid": "YOUR_WIFI_SSID",
+  "wifi_pass": "YOUR_WIFI_PASSWORD",
+  "mqtt_uri": "mqtts://broker.example.com:8883",
+  "mqtt_user": "",
+  "mqtt_pass": "",
+  "device_id": "espkit-s3-001",
+  "site_id": "lab"
+}

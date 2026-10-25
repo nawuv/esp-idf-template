@@ -6,8 +6,9 @@
     "node": ">=24.10.0 <25"
   },
   "scripts": {
-    "release": "semantic-release",
-    "check:release": "node --check release.config.mjs && node tools/check_release.mjs"
+    "release": "node tools/publish_release.mjs",
+    "check:release": "node --check release.config.mjs && node tools/check_release.mjs && node --test --test-isolation=none tests/release/*.test.mjs",
+    "plan:release": "node tools/release_plan.mjs"
   },
   "devDependencies": {
     "semantic-release": "25.0.9",

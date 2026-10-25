@@ -1,23 +1,24 @@
-#include "espkit/actuators/simulated_output.hpp"
-#include "espkit/application/workers.hpp"
-#include "espkit/sensors/synthetic_sensor.hpp"
+#include "application/workers.hpp"
+#include "drivers/simulated_output.hpp"
+#include "drivers/synthetic_sensor.hpp"
 
 #include <gtest/gtest.h>
 #include <vector>
 
 namespace {
 
-class FakeClock final : public espkit::Clock {
+class FakeClock final : public application::Clock {
     public:
-    espkit::Milliseconds time{0};
+    domain::Milliseconds time{0};
 
-    espkit::Milliseconds now() const noexcept override {
+    domain::Milliseconds now() const noexcept override {
         return time;
     }
 };
 
 template <typename T>
-class MemorySnapshot final : public espkit::SnapshotReader<T>, public espkit::SnapshotWriter<T> {
+class MemorySnapshot final : public application::SnapshotReader<T>,
+                             public application::SnapshotWriter<T> {
     public:
     bool present{false};
     T value{};
@@ -36,40 +37,40 @@ class MemorySnapshot final : public espkit::SnapshotReader<T>, public espkit::Sn
     }
 };
 
-class AlternateSensor final : public espkit::SensorSource {
+class AlternateSensor final : public application::SensorSource {
     public:
-    espkit::Reading read(espkit::Milliseconds now) noexcept override {
+    domain::Reading read(domain::Milliseconds now) noexcept override {
         return {17.5F, now, true};
     }
 };
 
-class Requests final : public espkit::RequestSource {
+class Requests final : public application::RequestSource {
     public:
     bool enabled{false};
 
-    bool enable_requested(espkit::Milliseconds) noexcept override {
+    bool enable_requested(domain::Milliseconds) noexcept override {
         return enabled;
     }
 };
 
-class FailingOutput final : public espkit::OutputSink {
+class FailingOutput final : public application::OutputSink {
     public:
     bool fail_stop{false};
     std::vector<bool> calls;
 
-    espkit::OutputError set_enabled(bool enabled) noexcept override {
+    domain::OutputError set_enabled(bool enabled) noexcept override {
         calls.push_back(enabled);
-        return enabled || fail_stop ? espkit::OutputError::hardware_fault
-                                    : espkit::OutputError::none;
+        return enabled || fail_stop ? domain::OutputError::hardware_fault
+                                    : domain::OutputError::none;
     }
 };
 
-class CaptureTelemetry final : public espkit::TelemetrySink {
+class CaptureTelemetry final : public application::TelemetrySink {
     public:
     unsigned calls{0};
-    espkit::Telemetry value{};
+    domain::Telemetry value{};
 
-    void report(const espkit::Telemetry& telemetry) noexcept override {
+    void report(const domain::Telemetry& telemetry) noexcept override {
         ++calls;
         value = telemetry;
     }
@@ -79,8 +80,8 @@ TEST(SensorWorker, UsesInjectedSensorAndClock) {
     FakeClock clock;
     clock.time = 321;
     AlternateSensor sensor;
-    MemorySnapshot<espkit::Reading> readings;
-    espkit::SensorWorker worker(sensor, clock, readings);
+    MemorySnapshot<domain::Reading> readings;
+    application::SensorWorker worker(sensor, clock, readings);
     worker.step();
     ASSERT_TRUE(readings.present);
     EXPECT_FLOAT_EQ(readings.value.value, 17.5F);
@@ -89,38 +90,38 @@ TEST(SensorWorker, UsesInjectedSensorAndClock) {
 
 TEST(SensorWorker, SensorImplementationCanBeReplacedWithoutChangingWorker) {
     FakeClock clock;
-    espkit::SyntheticSensor sensor(12.0F);
-    MemorySnapshot<espkit::Reading> readings;
-    espkit::SensorWorker worker(sensor, clock, readings);
+    drivers::SyntheticSensor sensor(12.0F);
+    MemorySnapshot<domain::Reading> readings;
+    application::SensorWorker worker(sensor, clock, readings);
     worker.step();
     EXPECT_FLOAT_EQ(readings.value.value, 12.0F);
 }
 
 TEST(ControlWorker, MissingReadingFailsClosed) {
     FakeClock clock;
-    MemorySnapshot<espkit::Reading> readings;
-    MemorySnapshot<espkit::Telemetry> telemetry;
+    MemorySnapshot<domain::Reading> readings;
+    MemorySnapshot<domain::Telemetry> telemetry;
     Requests requests;
     requests.enabled = true;
-    espkit::SimulatedOutput output;
-    espkit::TimedOutput policy({1000, 200});
-    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    drivers::SimulatedOutput output;
+    domain::TimedOutput policy({1000, 200});
+    application::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
     worker.step();
     EXPECT_FALSE(output.enabled());
     EXPECT_TRUE(policy.fault());
-    EXPECT_EQ(telemetry.value.applied_output, espkit::AppliedOutput::off);
+    EXPECT_EQ(telemetry.value.applied_output, domain::AppliedOutput::off);
 }
 
 TEST(ControlWorker, RunsLocallyAndStopsWhenSampleExpires) {
     FakeClock clock;
-    MemorySnapshot<espkit::Reading> readings;
+    MemorySnapshot<domain::Reading> readings;
     readings.publish({42.0F, 0, true});
-    MemorySnapshot<espkit::Telemetry> telemetry;
+    MemorySnapshot<domain::Telemetry> telemetry;
     Requests requests;
     requests.enabled = true;
-    espkit::SimulatedOutput output;
-    espkit::TimedOutput policy({1000, 200});
-    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    drivers::SimulatedOutput output;
+    domain::TimedOutput policy({1000, 200});
+    application::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
     worker.step();
     ASSERT_TRUE(output.enabled());
     clock.time = 201;
@@ -131,19 +132,19 @@ TEST(ControlWorker, RunsLocallyAndStopsWhenSampleExpires) {
 
 TEST(ControlWorker, OutputFailureLatchesFaultAndAttemptsStop) {
     FakeClock clock;
-    MemorySnapshot<espkit::Reading> readings;
+    MemorySnapshot<domain::Reading> readings;
     readings.publish({42.0F, 0, true});
-    MemorySnapshot<espkit::Telemetry> telemetry;
+    MemorySnapshot<domain::Telemetry> telemetry;
     Requests requests;
     requests.enabled = true;
     FailingOutput output;
-    espkit::TimedOutput policy({1000, 200});
-    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    domain::TimedOutput policy({1000, 200});
+    application::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
     worker.step();
     EXPECT_EQ(output.calls, (std::vector<bool>{true, false}));
     EXPECT_TRUE(policy.fault());
-    EXPECT_EQ(telemetry.value.output_error, espkit::OutputError::hardware_fault);
-    EXPECT_EQ(telemetry.value.applied_output, espkit::AppliedOutput::off);
+    EXPECT_EQ(telemetry.value.output_error, domain::OutputError::hardware_fault);
+    EXPECT_EQ(telemetry.value.applied_output, domain::AppliedOutput::off);
     worker.step();
     EXPECT_FALSE(output.calls.back());
     EXPECT_TRUE(telemetry.value.fault);
@@ -151,42 +152,60 @@ TEST(ControlWorker, OutputFailureLatchesFaultAndAttemptsStop) {
 
 TEST(ControlWorker, FailedStopIsReportedAsUnknown) {
     FakeClock clock;
-    MemorySnapshot<espkit::Reading> readings;
+    MemorySnapshot<domain::Reading> readings;
     readings.publish({42.0F, 0, true});
-    MemorySnapshot<espkit::Telemetry> telemetry;
+    MemorySnapshot<domain::Telemetry> telemetry;
     Requests requests;
     requests.enabled = true;
     FailingOutput output;
     output.fail_stop = true;
-    espkit::TimedOutput policy({1000, 200});
-    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    domain::TimedOutput policy({1000, 200});
+    application::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
     worker.step();
     EXPECT_TRUE(policy.fault());
-    EXPECT_EQ(telemetry.value.applied_output, espkit::AppliedOutput::unknown);
+    EXPECT_EQ(telemetry.value.applied_output, domain::AppliedOutput::unknown);
 }
 
 TEST(ReporterWorker, ReportsLatestSnapshotAndSkipsMissingData) {
-    MemorySnapshot<espkit::Telemetry> telemetry;
+    MemorySnapshot<domain::Telemetry> telemetry;
     CaptureTelemetry sink;
-    espkit::ReporterWorker worker(telemetry, sink);
+    application::ReporterWorker worker(telemetry, sink);
     worker.step();
     EXPECT_EQ(sink.calls, 0U);
-    telemetry.publish({123, false, espkit::AppliedOutput::off, false, espkit::OutputError::none});
+    telemetry.publish({123, false, domain::AppliedOutput::off, false, domain::OutputError::none});
     worker.step();
     EXPECT_EQ(sink.calls, 1U);
     EXPECT_EQ(sink.value.uptime, 123);
 }
 
 TEST(TimedOutput, StateTransitionsAreExplicit) {
-    espkit::TimedOutput policy({1000, 200});
-    EXPECT_EQ(policy.state(), espkit::OutputState::off);
+    domain::TimedOutput policy({1000, 200});
+    EXPECT_EQ(policy.state(), domain::OutputState::off);
     ASSERT_TRUE(policy.update(true, {42, 0, true}, 0));
-    EXPECT_EQ(policy.state(), espkit::OutputState::running);
+    EXPECT_EQ(policy.state(), domain::OutputState::running);
     policy.trip_fault();
-    EXPECT_EQ(policy.state(), espkit::OutputState::fault);
+    EXPECT_EQ(policy.state(), domain::OutputState::fault);
     EXPECT_FALSE(policy.update(true, {42, 1, true}, 1));
     ASSERT_TRUE(policy.reset_fault());
-    EXPECT_EQ(policy.state(), espkit::OutputState::off);
+    EXPECT_EQ(policy.state(), domain::OutputState::off);
+}
+
+TEST(ControlWorker, EnforcesRuntimeEvenWhenReporterIsNeverScheduled) {
+    FakeClock clock;
+    MemorySnapshot<domain::Reading> readings;
+    MemorySnapshot<domain::Telemetry> telemetry;
+    Requests requests;
+    requests.enabled = true;
+    drivers::SimulatedOutput output;
+    domain::TimedOutput policy({1000, 200});
+    application::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    for (domain::Milliseconds now = 0; now <= 1000; now += 100) {
+        clock.time = now;
+        readings.publish({42.0F, now, true});
+        worker.step();
+        EXPECT_EQ(output.enabled(), now < 1000);
+    }
+    EXPECT_TRUE(telemetry.value.fault);
 }
 
 } // namespace

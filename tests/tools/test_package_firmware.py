@@ -21,11 +21,15 @@ class FirmwarePackageTests(unittest.TestCase):
         self.build = self.root / 'build'
         (self.build / 'bootloader').mkdir(parents=True)
         (self.build / 'bootloader/bootloader.bin').write_bytes(b'bootloader')
-        (self.build / 'device.bin').write_bytes(b'application')
+        image = bytearray(80)
+        image[0] = 0xE9
+        image[32:36] = (0xABCD5432).to_bytes(4, 'little')
+        image[48:53] = b'0.1.0'
+        (self.build / 'device.bin').write_bytes(image)
         (self.build / 'flash_args').write_text('0x0 bootloader/bootloader.bin\n0x10000 device.bin\n')
         (self.build / 'sdkconfig').write_text('SECRET=do-not-package')
         (self.build / 'project_description.json').write_text(json.dumps({
-            'project_name': 'device', 'project_version': '0.1.0', 'target': 'esp32s3'}))
+            'project_name': 'device', 'project_version': '0.1.0', 'target': 'esp32s3', 'app_bin': 'device.bin'}))
         self.flash = {'flash_files': {'0x0': 'bootloader/bootloader.bin', '0x10000': 'device.bin'},
                       'extra_esptool_args': {'chip': 'esp32s3'}}
         self.write_flash()
@@ -49,6 +53,19 @@ class FirmwarePackageTests(unittest.TestCase):
         for line in (self.root / 'out/SHA256SUMS').read_text().splitlines():
             checksum, name = line.split()
             self.assertEqual(module.sha256((self.root / 'out' / name).read_bytes()), checksum)
+
+    def test_rejects_wrong_planned_version(self):
+        with self.assertRaisesRegex(ValueError, 'planned version'):
+            module.package(self.build, self.root / 'out', 'a' * 40,
+                           'ESP-IDF v5.4.2', '2.0.0-dev.1')
+        self.assertFalse((self.root / 'out').exists())
+
+    def test_rejects_image_and_description_version_mismatch(self):
+        image = bytearray((self.build / 'device.bin').read_bytes())
+        image[48:53] = b'9.9.9'
+        (self.build / 'device.bin').write_bytes(image)
+        with self.assertRaisesRegex(ValueError, 'image version'):
+            self.package()
 
     def test_rejects_path_traversal(self):
         self.flash['flash_files']['0x10000'] = '../outside.bin'

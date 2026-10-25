@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: ["**"]
   pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -10,20 +12,63 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
 
 jobs:
+  pr-title:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Validate PR title
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 tools/check_pr_title.py
+
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Fetch release channels
+        if: github.event_name == 'push' && vars.ENABLE_RELEASES == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        run: git fetch origin '+refs/heads/*:refs/remotes/origin/*' '+refs/notes/*:refs/notes/*' --tags
+      - name: Plan firmware version without publication access
+        id: plan
+        env:
+          RELEASE_ENABLED: ${{ vars.ENABLE_RELEASES }}
+        run: npm run plan:release
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-plan
+          path: local/ci/release-plan.json
+          if-no-files-found: error
+
   host-tests:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
       - name: Install formatter
         run: |
           sudo apt-get update
           sudo apt-get install --yes clang-format-18
+      - name: Check architecture boundaries
+        run: python3 tools/check_architecture.py
       - name: Check C++ formatting
         run: python3 tools/format.py --check
       - name: Run portable policy tests
@@ -34,8 +79,8 @@ jobs:
   documentation:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
           cache: pip
@@ -45,22 +90,22 @@ jobs:
         env:
           REPOSITORY_URL: https://github.com/${{ github.repository }}
         run: python -m mkdocs build --strict
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: documentation-site
           path: site/
           if-no-files-found: error
       - name: Prepare Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site/
 
   release-tooling:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -68,6 +113,7 @@ jobs:
       - run: npm run check:release
 
   firmware:
+    needs: version
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -75,6 +121,9 @@ jobs:
         include:
           - name: esp32s3
             project: .
+          - name: hardware-mqtt
+            project: .
+            defaults: sdkconfig.defaults;sdkconfig.defaults.esp32s3;config/hardware.defaults
           - name: unity
             project: tests/target
           - name: simulation
@@ -85,32 +134,56 @@ jobs:
             project: examples/actuator-node
     container: espressif/idf:v5.4.2@sha256:4317595a911886e04cbc6d731315d5fc2918e510b6733fc7d03381ab2d270082
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build and package firmware
         shell: bash
         env:
           PROJECT_DIR: ${{ matrix.project }}
           ARTIFACT_NAME: ${{ matrix.name }}
           SOURCE_SHA: ${{ github.sha }}
+          CONFIG_DEFAULTS: ${{ matrix.defaults }}
+          FIRMWARE_VERSION: ${{ needs.version.outputs.version }}
         run: |
           . "$IDF_PATH/export.sh"
+          if [ -n "$CONFIG_DEFAULTS" ]; then
+            export SDKCONFIG_DEFAULTS="$CONFIG_DEFAULTS"
+          fi
           idf.py -C "$PROJECT_DIR" set-target esp32s3
-          idf.py -C "$PROJECT_DIR" build
+          idf.py -C "$PROJECT_DIR" -DPROJECT_VER="$FIRMWARE_VERSION" build
           idf.py -C "$PROJECT_DIR" size
           python tools/package_firmware.py \
             --build-dir "$PROJECT_DIR/build" \
             --output "release-assets/$ARTIFACT_NAME" \
             --source-sha "$SOURCE_SHA" \
-            --sdk-version "$(idf.py --version)"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+            --sdk-version "$(idf.py --version)" \
+            --expected-version "$FIRMWARE_VERSION"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ matrix.name }}-firmware
           path: release-assets/${{ matrix.name }}/
           if-no-files-found: error
 
+  ci-required:
+    if: always()
+    needs: [pr-title, version, host-tests, documentation, release-tooling, firmware]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every validation job to succeed
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          results = json.loads(os.environ['JOB_RESULTS'])
+          failed = [name for name, job in results.items() if job['result'] != 'success']
+          if failed:
+              raise SystemExit('Required jobs did not succeed: ' + ', '.join(failed))
+          print('All required jobs succeeded.')
+          PY
+
   pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
-    needs: [host-tests, documentation, release-tooling, firmware]
+    needs: ci-required
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -120,48 +193,37 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
-      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         id: deployment
 
   release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_RELEASES == 'true'
-    needs: [host-tests, documentation, release-tooling, firmware]
+    if: github.event_name == 'push' && vars.ENABLE_RELEASES == 'true' && needs.version.outputs.publish == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    needs: [ci-required, version]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     concurrency:
-      group: stable-release
+      group: espkit-publish
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci --ignore-scripts
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: esp32s3-firmware
           path: release-assets/
-      - name: Verify artifact identity and integrity
-        run: |
-          cd release-assets
-          sha256sum -c SHA256SUMS
-          python -c 'import json, os; m=json.load(open("manifest.json")); assert m["source_sha"] == os.environ["GITHUB_SHA"], "Firmware/source commit mismatch"'
-      - name: Check that this main commit is still current
-        id: current
-        run: |
-          git fetch origin main
-          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Skipping superseded main build."
-          fi
-      - name: Publish release when commits require it
-        if: steps.current.outputs.publish == 'true'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-plan
+          path: release-assets/
+      - name: Publish the tested version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run release

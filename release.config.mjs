@@ -1,9 +1,18 @@
+// Share parsing rules so a breaking PR title also works after squash merge.
+export const commitParser = {
+  headerPattern: /^(\w+)(?:\(([^)]+)\))?!?: (.+)$/,
+  breakingHeaderPattern: /^(\w+)(?:\(([^)]+)\))?!: (.+)$/,
+  headerCorrespondence: ["type", "scope", "subject"],
+  noteKeywords: ["BREAKING CHANGE", "BREAKING-CHANGE"]
+};
+
 export default {
-  branches: ["main"],
+  branches: ["main", { name: "develop", prerelease: "dev", channel: "dev" }],
   tagFormat: "v${version}",
   plugins: [
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
+    ["@semantic-release/commit-analyzer", { parserOpts: commitParser }],
+    ["@semantic-release/release-notes-generator", { parserOpts: commitParser }],
+    "./tools/release_guard.mjs",
     ["@semantic-release/github", {
       // Avoid posting comments or opening issues from release automation.
       successComment: false,
