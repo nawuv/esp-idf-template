@@ -8,6 +8,8 @@ namespace espkit::runtime_constants {
 inline constexpr std::uint32_t sensor_stack_bytes = 3072;
 inline constexpr std::uint32_t control_stack_bytes = 4096;
 inline constexpr std::uint32_t reporter_stack_bytes = 3072;
+inline constexpr std::uint32_t network_stack_bytes = 8192;
+inline constexpr unsigned network_priority = 2;
 inline constexpr unsigned sensor_priority = 3;
 inline constexpr unsigned control_priority = 4;
 inline constexpr unsigned reporter_priority = 2;

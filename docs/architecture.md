@@ -102,3 +102,14 @@ Never use `volatile` for task synchronization. Run `python3 tools/format.py` wit
 clang-format 18; CI checks the same formatting rules.
 
 For distributed extensions, see [Cluster and swarm evolution](distributed-systems.md).
+
+## Hardware and networking adapters
+
+Optional SHT3x and Wi-Fi/MQTT implementations are wired only in composition.
+SHT3x bus waits stay on the sensor worker; MQTT reporting and reconnect work stay
+outside the control task. Runtime configuration loads from NVS schema 1 without
+automatic erasure. Physical outputs and remote commands remain disabled.
+
+New registered IDF components use an `espkit_` prefix to avoid SDK/component name
+collisions: ESP-IDF already owns `hal`, so our hardware adapters are `espkit_hal`.
+Public headers retain the `espkit/hal/...` naming. Follow this rule for new components.

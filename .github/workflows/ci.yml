@@ -75,6 +75,9 @@ jobs:
         include:
           - name: esp32s3
             project: .
+          - name: hardware-mqtt
+            project: .
+            defaults: sdkconfig.defaults;sdkconfig.defaults.esp32s3;config/hardware.defaults
           - name: unity
             project: tests/target
           - name: simulation
@@ -92,8 +95,12 @@ jobs:
           PROJECT_DIR: ${{ matrix.project }}
           ARTIFACT_NAME: ${{ matrix.name }}
           SOURCE_SHA: ${{ github.sha }}
+          CONFIG_DEFAULTS: ${{ matrix.defaults }}
         run: |
           . "$IDF_PATH/export.sh"
+          if [ -n "$CONFIG_DEFAULTS" ]; then
+            export SDKCONFIG_DEFAULTS="$CONFIG_DEFAULTS"
+          fi
           idf.py -C "$PROJECT_DIR" set-target esp32s3
           idf.py -C "$PROJECT_DIR" build
           idf.py -C "$PROJECT_DIR" size

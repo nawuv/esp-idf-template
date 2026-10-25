@@ -4,8 +4,7 @@ The initial build target is `esp32s3`, with a 4 MiB flash layout and no physical
 peripherals. No board pin map has been selected. A build is not hardware validation.
 
 To add a board, document chip, module, flash size, console transport, sensor bus,
-output polarity, boot-sensitive pins, and safe output behavior. Introduce a board
-component and select wiring there rather than scattering pin numbers across
+output polarity, boot-sensitive pins, and safe output behavior. Use `espkit_board` configuration and select wiring there rather than scattering pin numbers across
 application code. Add the board profile to CI only after its build works.
 
 Chip target and board profile are different axes. `idf.py set-target` selects the

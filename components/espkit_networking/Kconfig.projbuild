@@ -1,0 +1,16 @@
+menu "ESPKit networking"
+config ESPKIT_NETWORK_ENABLED
+    bool "Enable Wi-Fi station and MQTT telemetry"
+    default n
+    select MBEDTLS_CERTIFICATE_BUNDLE
+    help
+        Credentials are loaded from the espkit NVS namespace at runtime.
+        Missing/invalid credentials disable networking; local tasks continue.
+config ESPKIT_ALLOW_PLAINTEXT_MQTT
+    bool "Allow mqtt:// for an isolated development broker"
+    default n
+    depends on ESPKIT_NETWORK_ENABLED
+    help
+        Production defaults require mqtts:// with certificate verification.
+        This option sends broker credentials and telemetry without TLS.
+endmenu

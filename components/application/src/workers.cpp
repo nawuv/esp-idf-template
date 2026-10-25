@@ -25,7 +25,7 @@ void ControlWorker::step() noexcept {
             error = stop_error;
         }
     }
-    telemetry_.publish({now, requested, applied, policy_.fault(), error});
+    telemetry_.publish({now, requested, applied, policy_.fault(), error, reading});
 }
 
 void ReporterWorker::step() noexcept {
