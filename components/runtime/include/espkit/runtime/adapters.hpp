@@ -1,15 +1,15 @@
 #pragma once
 
+#include "espkit/core/ports.hpp"
+#include "espkit/runtime/constants.hpp"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
-#include "iot/core/ports.hpp"
-#include "iot/runtime/constants.hpp"
 
 #include <cstdlib>
 #include <type_traits>
 
-namespace iot {
+namespace espkit {
 
 class EspClock final : public Clock {
     public:
@@ -83,4 +83,4 @@ class PeriodicTask {
     TickType_t period_ticks_{0};
 };
 
-} // namespace iot
+} // namespace espkit

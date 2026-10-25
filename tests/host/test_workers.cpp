@@ -1,23 +1,23 @@
-#include "iot/actuators/simulated_output.hpp"
-#include "iot/application/workers.hpp"
-#include "iot/sensors/synthetic_sensor.hpp"
+#include "espkit/actuators/simulated_output.hpp"
+#include "espkit/application/workers.hpp"
+#include "espkit/sensors/synthetic_sensor.hpp"
 
 #include <gtest/gtest.h>
 #include <vector>
 
 namespace {
 
-class FakeClock final : public iot::Clock {
+class FakeClock final : public espkit::Clock {
     public:
-    iot::Milliseconds time{0};
+    espkit::Milliseconds time{0};
 
-    iot::Milliseconds now() const noexcept override {
+    espkit::Milliseconds now() const noexcept override {
         return time;
     }
 };
 
 template <typename T>
-class MemorySnapshot final : public iot::SnapshotReader<T>, public iot::SnapshotWriter<T> {
+class MemorySnapshot final : public espkit::SnapshotReader<T>, public espkit::SnapshotWriter<T> {
     public:
     bool present{false};
     T value{};
@@ -36,39 +36,40 @@ class MemorySnapshot final : public iot::SnapshotReader<T>, public iot::Snapshot
     }
 };
 
-class AlternateSensor final : public iot::SensorSource {
+class AlternateSensor final : public espkit::SensorSource {
     public:
-    iot::Reading read(iot::Milliseconds now) noexcept override {
+    espkit::Reading read(espkit::Milliseconds now) noexcept override {
         return {17.5F, now, true};
     }
 };
 
-class Requests final : public iot::RequestSource {
+class Requests final : public espkit::RequestSource {
     public:
     bool enabled{false};
 
-    bool enable_requested(iot::Milliseconds) noexcept override {
+    bool enable_requested(espkit::Milliseconds) noexcept override {
         return enabled;
     }
 };
 
-class FailingOutput final : public iot::OutputSink {
+class FailingOutput final : public espkit::OutputSink {
     public:
     bool fail_stop{false};
     std::vector<bool> calls;
 
-    iot::OutputError set_enabled(bool enabled) noexcept override {
+    espkit::OutputError set_enabled(bool enabled) noexcept override {
         calls.push_back(enabled);
-        return enabled || fail_stop ? iot::OutputError::hardware_fault : iot::OutputError::none;
+        return enabled || fail_stop ? espkit::OutputError::hardware_fault
+                                    : espkit::OutputError::none;
     }
 };
 
-class CaptureTelemetry final : public iot::TelemetrySink {
+class CaptureTelemetry final : public espkit::TelemetrySink {
     public:
     unsigned calls{0};
-    iot::Telemetry value{};
+    espkit::Telemetry value{};
 
-    void report(const iot::Telemetry& telemetry) noexcept override {
+    void report(const espkit::Telemetry& telemetry) noexcept override {
         ++calls;
         value = telemetry;
     }
@@ -78,8 +79,8 @@ TEST(SensorWorker, UsesInjectedSensorAndClock) {
     FakeClock clock;
     clock.time = 321;
     AlternateSensor sensor;
-    MemorySnapshot<iot::Reading> readings;
-    iot::SensorWorker worker(sensor, clock, readings);
+    MemorySnapshot<espkit::Reading> readings;
+    espkit::SensorWorker worker(sensor, clock, readings);
     worker.step();
     ASSERT_TRUE(readings.present);
     EXPECT_FLOAT_EQ(readings.value.value, 17.5F);
@@ -88,38 +89,38 @@ TEST(SensorWorker, UsesInjectedSensorAndClock) {
 
 TEST(SensorWorker, SensorImplementationCanBeReplacedWithoutChangingWorker) {
     FakeClock clock;
-    iot::SyntheticSensor sensor(12.0F);
-    MemorySnapshot<iot::Reading> readings;
-    iot::SensorWorker worker(sensor, clock, readings);
+    espkit::SyntheticSensor sensor(12.0F);
+    MemorySnapshot<espkit::Reading> readings;
+    espkit::SensorWorker worker(sensor, clock, readings);
     worker.step();
     EXPECT_FLOAT_EQ(readings.value.value, 12.0F);
 }
 
 TEST(ControlWorker, MissingReadingFailsClosed) {
     FakeClock clock;
-    MemorySnapshot<iot::Reading> readings;
-    MemorySnapshot<iot::Telemetry> telemetry;
+    MemorySnapshot<espkit::Reading> readings;
+    MemorySnapshot<espkit::Telemetry> telemetry;
     Requests requests;
     requests.enabled = true;
-    iot::SimulatedOutput output;
-    iot::TimedOutput policy({1000, 200});
-    iot::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    espkit::SimulatedOutput output;
+    espkit::TimedOutput policy({1000, 200});
+    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
     worker.step();
     EXPECT_FALSE(output.enabled());
     EXPECT_TRUE(policy.fault());
-    EXPECT_EQ(telemetry.value.applied_output, iot::AppliedOutput::off);
+    EXPECT_EQ(telemetry.value.applied_output, espkit::AppliedOutput::off);
 }
 
 TEST(ControlWorker, RunsLocallyAndStopsWhenSampleExpires) {
     FakeClock clock;
-    MemorySnapshot<iot::Reading> readings;
+    MemorySnapshot<espkit::Reading> readings;
     readings.publish({42.0F, 0, true});
-    MemorySnapshot<iot::Telemetry> telemetry;
+    MemorySnapshot<espkit::Telemetry> telemetry;
     Requests requests;
     requests.enabled = true;
-    iot::SimulatedOutput output;
-    iot::TimedOutput policy({1000, 200});
-    iot::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    espkit::SimulatedOutput output;
+    espkit::TimedOutput policy({1000, 200});
+    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
     worker.step();
     ASSERT_TRUE(output.enabled());
     clock.time = 201;
@@ -130,19 +131,19 @@ TEST(ControlWorker, RunsLocallyAndStopsWhenSampleExpires) {
 
 TEST(ControlWorker, OutputFailureLatchesFaultAndAttemptsStop) {
     FakeClock clock;
-    MemorySnapshot<iot::Reading> readings;
+    MemorySnapshot<espkit::Reading> readings;
     readings.publish({42.0F, 0, true});
-    MemorySnapshot<iot::Telemetry> telemetry;
+    MemorySnapshot<espkit::Telemetry> telemetry;
     Requests requests;
     requests.enabled = true;
     FailingOutput output;
-    iot::TimedOutput policy({1000, 200});
-    iot::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    espkit::TimedOutput policy({1000, 200});
+    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
     worker.step();
     EXPECT_EQ(output.calls, (std::vector<bool>{true, false}));
     EXPECT_TRUE(policy.fault());
-    EXPECT_EQ(telemetry.value.output_error, iot::OutputError::hardware_fault);
-    EXPECT_EQ(telemetry.value.applied_output, iot::AppliedOutput::off);
+    EXPECT_EQ(telemetry.value.output_error, espkit::OutputError::hardware_fault);
+    EXPECT_EQ(telemetry.value.applied_output, espkit::AppliedOutput::off);
     worker.step();
     EXPECT_FALSE(output.calls.back());
     EXPECT_TRUE(telemetry.value.fault);
@@ -150,42 +151,42 @@ TEST(ControlWorker, OutputFailureLatchesFaultAndAttemptsStop) {
 
 TEST(ControlWorker, FailedStopIsReportedAsUnknown) {
     FakeClock clock;
-    MemorySnapshot<iot::Reading> readings;
+    MemorySnapshot<espkit::Reading> readings;
     readings.publish({42.0F, 0, true});
-    MemorySnapshot<iot::Telemetry> telemetry;
+    MemorySnapshot<espkit::Telemetry> telemetry;
     Requests requests;
     requests.enabled = true;
     FailingOutput output;
     output.fail_stop = true;
-    iot::TimedOutput policy({1000, 200});
-    iot::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    espkit::TimedOutput policy({1000, 200});
+    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
     worker.step();
     EXPECT_TRUE(policy.fault());
-    EXPECT_EQ(telemetry.value.applied_output, iot::AppliedOutput::unknown);
+    EXPECT_EQ(telemetry.value.applied_output, espkit::AppliedOutput::unknown);
 }
 
 TEST(ReporterWorker, ReportsLatestSnapshotAndSkipsMissingData) {
-    MemorySnapshot<iot::Telemetry> telemetry;
+    MemorySnapshot<espkit::Telemetry> telemetry;
     CaptureTelemetry sink;
-    iot::ReporterWorker worker(telemetry, sink);
+    espkit::ReporterWorker worker(telemetry, sink);
     worker.step();
     EXPECT_EQ(sink.calls, 0U);
-    telemetry.publish({123, false, iot::AppliedOutput::off, false, iot::OutputError::none});
+    telemetry.publish({123, false, espkit::AppliedOutput::off, false, espkit::OutputError::none});
     worker.step();
     EXPECT_EQ(sink.calls, 1U);
     EXPECT_EQ(sink.value.uptime, 123);
 }
 
 TEST(TimedOutput, StateTransitionsAreExplicit) {
-    iot::TimedOutput policy({1000, 200});
-    EXPECT_EQ(policy.state(), iot::OutputState::off);
+    espkit::TimedOutput policy({1000, 200});
+    EXPECT_EQ(policy.state(), espkit::OutputState::off);
     ASSERT_TRUE(policy.update(true, {42, 0, true}, 0));
-    EXPECT_EQ(policy.state(), iot::OutputState::running);
+    EXPECT_EQ(policy.state(), espkit::OutputState::running);
     policy.trip_fault();
-    EXPECT_EQ(policy.state(), iot::OutputState::fault);
+    EXPECT_EQ(policy.state(), espkit::OutputState::fault);
     EXPECT_FALSE(policy.update(true, {42, 1, true}, 1));
     ASSERT_TRUE(policy.reset_fault());
-    EXPECT_EQ(policy.state(), iot::OutputState::off);
+    EXPECT_EQ(policy.state(), espkit::OutputState::off);
 }
 
 } // namespace

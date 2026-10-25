@@ -1,8 +1,8 @@
-#include "iot/application/timed_output.hpp"
+#include "espkit/application/timed_output.hpp"
 
 #include <cmath>
 
-namespace iot {
+namespace espkit {
 
 TimedOutput::TimedOutput(OutputPolicy policy) noexcept : policy_(policy) {
 }
@@ -40,4 +40,4 @@ bool TimedOutput::reset_fault() noexcept {
     return true;
 }
 
-} // namespace iot
+} // namespace espkit

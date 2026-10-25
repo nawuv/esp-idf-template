@@ -1,4 +1,4 @@
-# ESP-IDF IoT Template
+# ESPKit
 
 A small C++20 foundation for ESP32 devices, sensor networks, and actuator nodes.
 The first target is ESP32-S3 with ESP-IDF **5.4.2**. This is an explicit baseline,
@@ -100,7 +100,7 @@ normally do not create a new version.
 
 ## Customize
 
-- Rename `iot_device` in the root CMake project.
+- Rename `espkit_device` in the root CMake project.
 - Select sensor/output/reporting implementations in `components/composition/src/device.cpp`.
 - Adjust sampling periods in `composition/constants.hpp` and safety defaults in
   `application/constants.hpp`; task memory and priority defaults live in `runtime/constants.hpp`.

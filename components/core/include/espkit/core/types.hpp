@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace iot {
+namespace espkit {
 
 using Milliseconds = std::int64_t;
 
@@ -32,4 +32,4 @@ struct Telemetry {
     OutputError output_error;
 };
 
-} // namespace iot
+} // namespace espkit

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "iot/application/timed_output.hpp"
-#include "iot/core/ports.hpp"
+#include "espkit/application/timed_output.hpp"
+#include "espkit/core/ports.hpp"
 
-namespace iot {
+namespace espkit {
 
 // Dependencies are borrowed and must outlive the worker. Each worker has one owner.
 class SensorWorker final : public Work {
@@ -52,4 +52,4 @@ class ReporterWorker final : public Work {
     TelemetrySink& sink_;
 };
 
-} // namespace iot
+} // namespace espkit

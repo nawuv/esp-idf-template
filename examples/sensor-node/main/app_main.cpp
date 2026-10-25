@@ -1,28 +1,28 @@
 #include "esp_log.h"
+#include "espkit/application/workers.hpp"
+#include "espkit/runtime/adapters.hpp"
+#include "espkit/sensors/synthetic_sensor.hpp"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "iot/application/workers.hpp"
-#include "iot/runtime/adapters.hpp"
-#include "iot/sensors/synthetic_sensor.hpp"
 
 #include <cstdlib>
 
 namespace {
 
 constexpr float demo_sensor_value = 23.5F;
-constexpr iot::Milliseconds sampling_period_ms = 500;
+constexpr espkit::Milliseconds sampling_period_ms = 500;
 constexpr unsigned reporting_period_ms = 1000;
 
 } // namespace
 
 extern "C" void app_main() {
-    static iot::EspClock clock;
-    static iot::SyntheticSensor sensor(demo_sensor_value);
-    static iot::FreeRtosSnapshot<iot::Reading> readings;
-    static iot::SensorWorker worker(sensor, clock, readings);
-    static iot::PeriodicTask task(worker,
-                                  {"sensor", iot::runtime_constants::sensor_stack_bytes,
-                                   iot::runtime_constants::sensor_priority, sampling_period_ms});
+    static espkit::EspClock clock;
+    static espkit::SyntheticSensor sensor(demo_sensor_value);
+    static espkit::FreeRtosSnapshot<espkit::Reading> readings;
+    static espkit::SensorWorker worker(sensor, clock, readings);
+    static espkit::PeriodicTask task(
+        worker, {"sensor", espkit::runtime_constants::sensor_stack_bytes,
+                 espkit::runtime_constants::sensor_priority, sampling_period_ms});
     if (!readings.ready()) {
         std::abort();
     }
@@ -31,7 +31,7 @@ extern "C" void app_main() {
         std::abort();
     }
     for (;;) {
-        iot::Reading reading{};
+        espkit::Reading reading{};
         if (readings.latest(reading)) {
             ESP_LOGI("sensor_node", "value=%.1f sampled_at_ms=%lld valid=%d",
                      static_cast<double>(reading.value), static_cast<long long>(reading.sampled_at),

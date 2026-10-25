@@ -1,14 +1,14 @@
-#include "iot/composition/device.hpp"
+#include "espkit/composition/device.hpp"
 
-#include "iot/actuators/simulated_output.hpp"
-#include "iot/application/workers.hpp"
-#include "iot/composition/constants.hpp"
-#include "iot/runtime/adapters.hpp"
-#include "iot/sensors/synthetic_sensor.hpp"
+#include "espkit/actuators/simulated_output.hpp"
+#include "espkit/application/workers.hpp"
+#include "espkit/composition/constants.hpp"
+#include "espkit/runtime/adapters.hpp"
+#include "espkit/sensors/synthetic_sensor.hpp"
 
 #include <cstdlib>
 
-namespace iot {
+namespace espkit {
 
 namespace {
 
@@ -75,4 +75,4 @@ void start_device() {
     device.start();
 }
 
-} // namespace iot
+} // namespace espkit

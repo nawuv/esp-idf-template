@@ -3,14 +3,14 @@
 ## Understand the boundary
 
 `SensorWorker` receives a `SensorSource&`, `Clock&`, and reading writer. It does not
-construct a particular sensor or call ESP-IDF. See `components/core/include/iot/core/ports.hpp`.
+construct a particular sensor or call ESP-IDF. See `components/core/include/espkit/core/ports.hpp`.
 
 ## Implement a source
 
 ```cpp
-class MySensor final : public iot::SensorSource {
+class MySensor final : public espkit::SensorSource {
     public:
-    iot::Reading read(iot::Milliseconds now) noexcept override {
+    espkit::Reading read(espkit::Milliseconds now) noexcept override {
         // Replace with bounded I/O and actual conversion.
         return {25.0F, now, true};
     }

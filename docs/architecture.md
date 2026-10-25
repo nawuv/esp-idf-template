@@ -1,5 +1,11 @@
 # Architecture
 
+## Public naming
+
+The project is named ESPKit. Public C++ symbols use the `espkit` root namespace,
+and headers use `espkit/<component>/...` paths. The GitHub repository slug is
+independent of this API name. Example: `espkit/application/timed_output.hpp`.
+
 ## Dependency direction
 
 ```text

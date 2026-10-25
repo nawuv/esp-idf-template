@@ -1,5 +1,5 @@
 {
-  "name": "esp-idf-template-automation",
+  "name": "espkit-automation",
   "private": true,
   "description": "Development tooling only; firmware is built with ESP-IDF and CMake.",
   "engines": {

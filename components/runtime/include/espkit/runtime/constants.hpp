@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace iot::runtime_constants {
+namespace espkit::runtime_constants {
 
 // ESP-IDF task stack sizes are expressed in bytes.
 inline constexpr std::uint32_t sensor_stack_bytes = 3072;
@@ -15,4 +15,4 @@ inline constexpr unsigned latest_snapshot_capacity = 1;
 inline constexpr std::int64_t microseconds_per_millisecond = 1000;
 inline constexpr std::uint64_t milliseconds_per_second = 1000;
 
-} // namespace iot::runtime_constants
+} // namespace espkit::runtime_constants

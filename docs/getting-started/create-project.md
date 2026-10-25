@@ -2,7 +2,7 @@
 
 1. Open the template repository and select **Use this template**.
 2. Create a new repository and clone it locally.
-3. Rename `iot_device` in the root `CMakeLists.txt` if desired.
+3. Rename `espkit_device` in the root `CMakeLists.txt` if desired.
 4. Follow [Build and run](build-and-run.md).
 
 Use the stable `main` branch for new projects. Contributors work on `develop`.

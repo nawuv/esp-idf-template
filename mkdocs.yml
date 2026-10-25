@@ -1,4 +1,4 @@
-site_name: ESP-IDF IoT Template
+site_name: ESPKit
 site_description: A portable C++20 foundation for ESP32 devices, sensors, and actuators.
 repo_url: !ENV [REPOSITORY_URL, 'https://github.com/nawuv/esp-idf-template']
 edit_uri: edit/develop/docs/

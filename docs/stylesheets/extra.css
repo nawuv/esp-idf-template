@@ -1,15 +1,15 @@
 /* Keep the documentation readable without external fonts or scripts. */
-:root { --iot-accent: #16755b; }
+:root { --espkit-accent: #16755b; }
 body { line-height: 1.75; }
 h1, h2, h3 { letter-spacing: -0.025em; }
 h1 { font-weight: 700; }
-.hero { padding: 2rem; margin: 1.5rem 0; border-left: 5px solid var(--iot-accent);
+.hero { padding: 2rem; margin: 1.5rem 0; border-left: 5px solid var(--espkit-accent);
   border-radius: 0 12px 12px 0; background: rgba(22, 117, 91, 0.08); }
-.eyebrow { color: var(--iot-accent); font-size: 0.85rem; font-weight: 700;
+.eyebrow { color: var(--espkit-accent); font-size: 0.85rem; font-weight: 700;
   letter-spacing: 0.12em; text-transform: uppercase; }
 .hero-lead { font-size: 1.8rem; line-height: 1.3; font-weight: 650; max-width: 25em; }
 pre { border-radius: 8px; }
 table { margin: 1.5rem 0; }
 @media (max-width: 600px) { .hero { padding: 1.2rem; } .hero-lead { font-size: 1.4rem; } }
 
-@media (prefers-color-scheme: dark) { :root { --iot-accent: #63d4b0; } }
+@media (prefers-color-scheme: dark) { :root { --espkit-accent: #63d4b0; } }

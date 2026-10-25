@@ -1,8 +1,8 @@
 #pragma once
 
-#include "iot/core/ports.hpp"
+#include "espkit/core/ports.hpp"
 
-namespace iot {
+namespace espkit {
 
 // Records state in memory. Never accesses GPIO or physical feedback.
 class SimulatedOutput final : public OutputSink {
@@ -20,4 +20,4 @@ class SimulatedOutput final : public OutputSink {
     bool enabled_{false};
 };
 
-} // namespace iot
+} // namespace espkit

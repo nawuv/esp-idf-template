@@ -1,5 +1,5 @@
-#include "iot/composition/device.hpp"
+#include "espkit/composition/device.hpp"
 
 extern "C" void app_main() {
-    iot::start_device();
+    espkit::start_device();
 }

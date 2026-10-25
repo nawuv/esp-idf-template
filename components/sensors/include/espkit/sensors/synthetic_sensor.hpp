@@ -1,8 +1,8 @@
 #pragma once
 
-#include "iot/core/ports.hpp"
+#include "espkit/core/ports.hpp"
 
-namespace iot {
+namespace espkit {
 
 class SyntheticSensor final : public SensorSource {
     public:
@@ -17,4 +17,4 @@ class SyntheticSensor final : public SensorSource {
     float value_;
 };
 
-} // namespace iot
+} // namespace espkit

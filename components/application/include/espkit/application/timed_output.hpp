@@ -1,8 +1,8 @@
 #pragma once
 
-#include "iot/application/constants.hpp"
+#include "espkit/application/constants.hpp"
 
-namespace iot {
+namespace espkit {
 
 struct OutputPolicy {
     Milliseconds max_run_ms{policy_defaults::default_max_run_ms};
@@ -42,4 +42,4 @@ class TimedOutput {
     OutputState state_{OutputState::off};
 };
 
-} // namespace iot
+} // namespace espkit

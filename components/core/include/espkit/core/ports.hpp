@@ -1,8 +1,8 @@
 #pragma once
 
-#include "iot/core/types.hpp"
+#include "espkit/core/types.hpp"
 
-namespace iot {
+namespace espkit {
 
 class Clock {
     public:
@@ -53,4 +53,4 @@ class Work {
     virtual void step() noexcept = 0;
 };
 
-} // namespace iot
+} // namespace espkit
