@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-namespace espkit {
+namespace espkit::configuration {
 
 bool load_network_config(NetworkConfig& config, bool allow_plaintext) noexcept {
     // Preserve credentials and unrelated settings if NVS initialization fails.
@@ -39,4 +39,4 @@ bool load_network_config(NetworkConfig& config, bool allow_plaintext) noexcept {
     return true;
 }
 
-} // namespace espkit
+} // namespace espkit::configuration

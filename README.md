@@ -63,17 +63,13 @@ bash tools/test-host.sh
 
 | Path | Responsibility |
 | --- | --- |
-| `main/` | Firmware entry point |
-| `components/core/` | Portable time and message types |
-| `components/application/` | Portable workers and output policy |
-| `components/sensors/` | Synthetic and SHT3x sensor adapters |
-| `components/espkit_board/` | Explicit board settings and Kconfig |
-| `components/espkit_hal/` | ESP-IDF I2C and delay adapters |
+| `main/` | Entry point, concrete wiring, board settings, and task budgets |
+| `components/espkit_domain/` | Portable measurements, status, and safety policy |
+| `components/espkit_application/` | Portable ports and workers |
+| `components/espkit_drivers/` | Synthetic/SHT3x sensors and simulated output |
+| `components/espkit_platform/` | ESP-IDF I2C, FreeRTOS scheduling/queues, clock, and logs |
 | `components/espkit_configuration/` | Validated runtime NVS network settings |
-| `components/espkit_networking/` | Wi-Fi/MQTT and telemetry encoding |
-| `components/actuators/` | In-memory output adapter |
-| `components/runtime/` | FreeRTOS scheduling, snapshots, clock, and log adapters |
-| `components/composition/` | Concrete object construction, defaults, and dependency wiring |
+| `components/espkit_networking/` | Wi-Fi, MQTT telemetry, and connection coordination |
 | `tests/host/` | GoogleTest tests built without ESP-IDF |
 | `docs/` | Architecture, protocols, safety, and roadmap |
 | `examples/` | Three standalone simulation projects |
@@ -82,7 +78,7 @@ bash tools/test-host.sh
 See [Hardware and MQTT](docs/hardware-mqtt.md) for optional real sensor/network setup,
 and [Fork workflow](docs/development-workflow.md) for personal development.
 
-Start with [Architecture](docs/architecture.md), [Porting](docs/board-porting.md),
+Start with [Code walkthrough](docs/code-walkthrough.md), [Architecture](docs/architecture.md), [Porting](docs/board-porting.md),
 [MQTT contract](docs/mqtt-contract.md), [Distributed evolution](docs/distributed-systems.md),
 and [Roadmap](docs/roadmap.md).
 
@@ -111,9 +107,8 @@ normally do not create a new version.
 ## Customize
 
 - Rename `espkit_device` in the root CMake project.
-- Select sensor/output/reporting implementations in `components/composition/src/device.cpp`.
-- Adjust sampling periods in `composition/constants.hpp` and safety defaults in
-  `application/constants.hpp`; task memory and priority defaults live in `runtime/constants.hpp`.
+- Select sensor/output/reporting implementations in `main/device.cpp`.
+- Adjust sampling periods, task budgets, and selected safety policy in `main/device_config.hpp`.
 - Add board wiring before implementing a physical output.
 - Keep business rules independent of ESP-IDF and test them on the host.
 - Keep credentials and signing keys out of source control and build artifacts.

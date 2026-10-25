@@ -1,5 +1,7 @@
 # ADR 0002: Injected workers and composition-owned lifetime
 
+Component placement and namespaces are refined by [ADR 0003](0003-layered-components.md); the constructor-injection and lifetime policy remains.
+
 Status: accepted
 
 ## Context

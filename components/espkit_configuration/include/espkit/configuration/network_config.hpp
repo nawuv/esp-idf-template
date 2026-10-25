@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-namespace espkit {
+namespace espkit::configuration {
 
 struct NetworkConfig {
     char wifi_ssid[33]{};
@@ -18,4 +18,4 @@ bool valid_network_config(const NetworkConfig& config, bool allow_plaintext = fa
 // Loads the default NVS partition without erasing or migrating existing storage.
 bool load_network_config(NetworkConfig& config, bool allow_plaintext) noexcept;
 
-} // namespace espkit
+} // namespace espkit::configuration

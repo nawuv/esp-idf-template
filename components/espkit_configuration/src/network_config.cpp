@@ -4,7 +4,7 @@
 #include <cstring>
 #include <string_view>
 
-namespace espkit {
+namespace espkit::configuration {
 
 namespace {
 
@@ -96,4 +96,4 @@ bool valid_network_config(const NetworkConfig& c, bool allow_plaintext) noexcept
            identifier(c.site_id);
 }
 
-} // namespace espkit
+} // namespace espkit::configuration

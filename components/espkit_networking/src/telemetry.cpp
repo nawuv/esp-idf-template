@@ -4,22 +4,23 @@
 #include <cmath>
 #include <cstdio>
 
-namespace espkit {
+namespace espkit::networking {
 
-std::size_t encode_telemetry(const Telemetry& s, std::span<char> buffer) noexcept {
+std::size_t encode_telemetry(const espkit::domain::Telemetry& s, std::span<char> buffer) noexcept {
     if (buffer.empty() || s.uptime < 0) {
         return 0;
     }
-    const char* applied = s.applied_output == AppliedOutput::on    ? "on"
-                          : s.applied_output == AppliedOutput::off ? "off"
-                                                                   : "unknown";
-    const char* unit = s.reading.unit == MeasurementUnit::celsius ? "celsius"
-                       : s.reading.unit == MeasurementUnit::relative_humidity_percent
-                           ? "percent_rh"
-                           : "unspecified";
-    const char* origin = s.reading.origin == DataOrigin::synthetic  ? "synthetic"
-                         : s.reading.origin == DataOrigin::physical ? "physical"
-                                                                    : "unspecified";
+    const char* applied = s.applied_output == espkit::domain::AppliedOutput::on    ? "on"
+                          : s.applied_output == espkit::domain::AppliedOutput::off ? "off"
+                                                                                   : "unknown";
+    const char* unit =
+        s.reading.unit == espkit::domain::MeasurementUnit::celsius ? "celsius"
+        : s.reading.unit == espkit::domain::MeasurementUnit::relative_humidity_percent
+            ? "percent_rh"
+            : "unspecified";
+    const char* origin = s.reading.origin == espkit::domain::DataOrigin::synthetic  ? "synthetic"
+                         : s.reading.origin == espkit::domain::DataOrigin::physical ? "physical"
+                                                                                    : "unspecified";
     const bool valid = s.reading.valid && std::isfinite(s.reading.value) &&
                        s.reading.sampled_at >= 0 && s.reading.sampled_at <= s.uptime;
     char value[48] = "null";
@@ -49,4 +50,4 @@ std::uint32_t ReconnectBackoff::next_delay(std::uint32_t random) noexcept {
     return std::min(maximum_ms, base + random % (base / 4 + 1));
 }
 
-} // namespace espkit
+} // namespace espkit::networking

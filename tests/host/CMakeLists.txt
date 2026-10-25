@@ -14,16 +14,15 @@ add_executable(policy_tests
     test_workers.cpp
     test_sht3x.cpp
     test_networking.cpp
-    ../../components/application/src/timed_output.cpp
-    ../../components/application/src/workers.cpp
-    ../../components/sensors/src/sht3x.cpp
+    ../../components/espkit_domain/src/timed_output.cpp
+    ../../components/espkit_application/src/workers.cpp
+    ../../components/espkit_drivers/src/sht3x.cpp
     ../../components/espkit_configuration/src/network_config.cpp
     ../../components/espkit_networking/src/telemetry.cpp)
 target_include_directories(policy_tests PRIVATE
-    ../../components/core/include
-    ../../components/application/include
-    ../../components/sensors/include
-    ../../components/actuators/include
+    ../../components/espkit_domain/include
+    ../../components/espkit_application/include
+    ../../components/espkit_drivers/include
     ../../components/espkit_networking/include
     ../../components/espkit_configuration/include)
 target_compile_options(policy_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)

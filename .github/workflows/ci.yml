@@ -24,6 +24,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes clang-format-18
+      - name: Check architecture boundaries
+        run: python3 tools/check_architecture.py
       - name: Check C++ formatting
         run: python3 tools/format.py --check
       - name: Run portable policy tests
