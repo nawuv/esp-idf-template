@@ -1,0 +1,21 @@
+name: Bug report
+description: Report a reproducible firmware or template issue.
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Board, chip, SDK version, and commit.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction and expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Remove credentials and identifying device information.

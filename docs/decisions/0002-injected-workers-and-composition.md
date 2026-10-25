@@ -1,0 +1,24 @@
+# ADR 0002: Injected workers and composition-owned lifetime
+
+Status: accepted
+
+## Context
+
+The first runtime created a concrete synthetic sensor inside its task function.
+Portable sensor ports existed but production workers could not use alternate
+implementations without editing execution code.
+
+## Decision
+
+Extract single-step sensor, control, and reporter workers into application code.
+Inject portable ports by reference. Place concrete construction in a dedicated
+composition component with device lifetime. FreeRTOS schedules generic Work objects.
+Use explicit output states and error reporting; failed stop yields unknown output.
+Group constants by owning component rather than a project-wide miscellaneous file.
+
+## Consequences
+
+Workers can be tested without ESP-IDF, and driver selection changes only composition.
+The system has no runtime DI container or hidden service lookup. Borrowed dependency
+lifetimes and bounded calls are mandatory. Current composition is boot-once and
+simulation-only. Distribution and swarm coordination remain separate future work.

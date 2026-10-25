@@ -1,0 +1,24 @@
+# LLVM baseline with project-specific readability rules. Use clang-format 18.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+IndentWidth: 4
+ColumnLimit: 100
+IndentAccessModifiers: false
+AccessModifierOffset: 0
+EmptyLineBeforeAccessModifier: Always
+EmptyLineAfterAccessModifier: Never
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+AllowShortEnumsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortLambdasOnASingleLine: None
+SeparateDefinitionBlocks: Always
+IncludeBlocks: Regroup
+SortIncludes: CaseSensitive
+PointerAlignment: Left
+ReferenceAlignment: Left
+NamespaceIndentation: None
+KeepEmptyLinesAtTheStartOfBlocks: true
+MaxEmptyLinesToKeep: 1
