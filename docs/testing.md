@@ -46,6 +46,7 @@ npm run check:release
 ```
 
 The Python tests verify archive paths, binary checksums, reproducible bundles,
-and rejection of path traversal/target mismatch. Node 24 tooling checks that docs
-skip a release and fix/feature/breaking commits produce the intended version level.
+and rejection of path traversal/target mismatch. Node 24 and Git tests exercise real temporary histories: docs skip, feature/breaking
+increments, dev numbering, stable promotion, new template history, artifact mismatches,
+and checksum rejection. PR titles and planned firmware versions are checked as well.
 Live GitHub publishing still requires repository access and activation settings.

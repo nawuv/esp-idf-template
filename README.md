@@ -101,8 +101,9 @@ Development flows through `feature/* -> develop -> main`. Keep main as the stabl
 template default. CI builds and tests without secrets. Set `ENABLE_PAGES=true` and/or
 `ENABLE_RELEASES=true` as **repository variables** after completing
 [repository setup](docs/repository-setup.md). Services remain disabled in new copies
-until configured. Main pushes evaluate releases after all checks; docs-only changes
-normally do not create a new version.
+until configured. Main and develop pushes evaluate stable/dev releases after all checks; docs-only changes
+normally do not create a new version. `ci-required` aggregates all validation results.
+Firmware versions are calculated before compilation and checked again before publication.
 
 ## Customize
 
