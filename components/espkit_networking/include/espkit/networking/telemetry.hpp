@@ -1,15 +1,16 @@
 #pragma once
 
-#include "espkit/core/types.hpp"
+#include "espkit/domain/types.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <span>
 
-namespace espkit {
+namespace espkit::networking {
 
 // Returns payload length (excluding NUL), or zero for invalid/insufficient storage.
-std::size_t encode_telemetry(const Telemetry& status, std::span<char> buffer) noexcept;
+std::size_t encode_telemetry(const espkit::domain::Telemetry& status,
+                             std::span<char> buffer) noexcept;
 
 class ReconnectBackoff {
     public:
@@ -23,4 +24,4 @@ class ReconnectBackoff {
     unsigned attempt_{0};
 };
 
-} // namespace espkit
+} // namespace espkit::networking

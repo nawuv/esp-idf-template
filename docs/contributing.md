@@ -6,6 +6,7 @@ branch based on `develop`, then open a pull request targeting `develop`.
 ```sh
 python3 tools/format.py
 python3 tools/format.py --check
+python3 tools/check_architecture.py
 bash tools/test-host.sh
 mkdocs build --strict
 ```

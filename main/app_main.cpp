@@ -1,5 +1,5 @@
-#include "espkit/composition/device.hpp"
+#include "device.hpp"
 
 extern "C" void app_main() {
-    espkit::start_device();
+    device::start_device();
 }

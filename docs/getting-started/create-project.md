@@ -10,9 +10,9 @@ A template copy starts a new history; it does not automatically receive upstream
 
 ## Make it yours
 
-- Choose concrete implementations in `components/composition/src/device.cpp`.
-- Set execution periods in `composition/constants.hpp`.
-- Set default safety limits in `application/constants.hpp`.
+- Choose concrete implementations in `main/device.cpp`.
+- Set execution periods in `main/device_config.hpp`.
+- Select product safety limits through `output_policy` in `main/device_config.hpp`.
 - Review flash size, console transport, license attribution, and board requirements.
 - Keep credentials out of Git and build artifacts.
 

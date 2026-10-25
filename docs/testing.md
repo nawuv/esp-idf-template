@@ -12,7 +12,7 @@ Add domain-specific boundary tests when control rules grow.
 
 ## Target
 
-A Unity policy smoke test lives in `components/application/test/`, with a dedicated
+A Unity policy smoke test lives in `components/espkit_domain/test/`, with a dedicated
 application in `tests/target/`. Build and flash it using:
 
 ```sh
@@ -21,20 +21,21 @@ idf.py -C tests/target build
 idf.py -C tests/target -p /dev/ttyACM0 flash monitor
 ```
 
-Select the application test from the serial Unity menu. These tests require a
+Select the domain test from the serial Unity menu. These tests require a
 physical board to execute. Validate GPIO polarity, NVS, bus timeouts, RTOS timing,
 stack high-water marks, and driver behavior on physical hardware. Use a protected
 self-hosted runner for HIL. Never expose connected actuators to untrusted PR jobs.
 
 ## Integration
 
-When networking is added, run a local test broker and inject disconnects, invalid
+For the optional networking path, run a local test broker and inject disconnects, invalid
 credentials, duplicate and expired commands, fragmented payloads, queue pressure,
 and simultaneous reconnects. Observe control deadlines while the network is busy.
 
-CI compiles the root firmware, Unity application, and all three examples. It runs
+CI compiles default and hardware-enabled root firmware, the Unity application, and all three examples. It runs
 host tests, firmware bundle integrity tests, release-rule checks, formatting, and
-strict documentation builds. It does not claim on-device validation.
+strict documentation builds. `python3 tools/check_architecture.py` checks owned
+include and CMake dependency boundaries. It does not claim on-device validation.
 
 ## Packaging and release rules
 
