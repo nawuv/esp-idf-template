@@ -2,9 +2,9 @@
 
 | Location | Owns |
 | --- | --- |
-| `espkit/domain/policy_defaults.hpp` | Default maximum runtime and sample age |
+| `domain/policy_defaults.hpp` | Default maximum runtime and sample age |
 | `main/device_config.hpp` | Device periods, task budgets, selected policy, and synthetic value |
-| `espkit/platform/constants.hpp` | Queue capacity and time conversions |
+| `platform/constants.hpp` | Queue capacity and time conversions |
 
 Use named `inline constexpr` values with units in their names. Keep test scenario
 values local to each test. Do not create a global miscellaneous constants file.

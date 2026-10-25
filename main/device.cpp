@@ -1,25 +1,28 @@
 #include "device.hpp"
 
+#include "application/workers.hpp"
 #include "boards/esp32s3/board_config.hpp"
+#include "configuration/nvs_config_store.hpp"
 #include "device_config.hpp"
+#include "drivers/sht3x.hpp"
+#include "drivers/simulated_output.hpp"
+#include "drivers/synthetic_sensor.hpp"
 #include "esp_log.h"
-#include "espkit/application/workers.hpp"
-#include "espkit/drivers/sht3x.hpp"
-#include "espkit/drivers/simulated_output.hpp"
-#include "espkit/drivers/synthetic_sensor.hpp"
-#include "espkit/networking/network_service.hpp"
-#include "espkit/platform/adapters.hpp"
-#include "espkit/platform/i2c.hpp"
+#include "networking/mqtt_telemetry.hpp"
+#include "networking/network_service.hpp"
+#include "networking/sntp_time.hpp"
+#include "networking/wifi_station.hpp"
+#include "platform/clock.hpp"
+#include "platform/i2c.hpp"
+#include "platform/log_telemetry.hpp"
+#include "platform/periodic_task.hpp"
+#include "platform/snapshot.hpp"
 
 #include <cstdlib>
 
 namespace device {
 
-namespace app = espkit::application;
-namespace domain = espkit::domain;
-namespace drivers = espkit::drivers;
-namespace platform = espkit::platform;
-namespace networking = espkit::networking;
+namespace app = application;
 
 namespace {
 
@@ -68,11 +71,24 @@ class DeviceRuntime {
             std::abort();
         }
         started_ = true;
+#if CONFIG_ESPKIT_NETWORK_ENABLED
+        configuration::NetworkConfig config{};
+        configuration::NvsConfigStore store;
+#if CONFIG_ESPKIT_ALLOW_PLAINTEXT_MQTT
+        constexpr bool allow_plaintext = true;
+#else
+        constexpr bool allow_plaintext = false;
+#endif
+        if (store.load(config, allow_plaintext)) {
+            network_.configure(config);
+        } else {
+            ESP_LOGW("network", "Network configuration unavailable; local control continues");
+        }
+#endif
 #if CONFIG_ESPKIT_SENSOR_SHT3X
         if (!bus_.begin(board::sda_gpio, board::scl_gpio, board::sensor_address,
                         board::i2c_clock_hz, board::i2c_timeout_ms)) {
-            ESP_LOGW("espkit_board",
-                     "I2C unavailable: check explicitly configured pins and wiring");
+            ESP_LOGW("board", "I2C unavailable: check explicitly configured pins and wiring");
         }
 #endif
         // Seed snapshots and apply safe OFF before any concurrent execution.
@@ -104,7 +120,8 @@ class DeviceRuntime {
     platform::LogTelemetry log_{"simulated"};
     networking::WifiStation wifi_{clock_};
     networking::MqttTelemetry mqtt_;
-    networking::NetworkService network_{wifi_, mqtt_};
+    networking::SntpTime network_time_;
+    networking::NetworkService network_{wifi_, mqtt_, network_time_};
     CombinedReporter reporter_{log_, network_};
     domain::TimedOutput policy_{defaults::output_policy};
     app::SensorWorker sensor_worker_;

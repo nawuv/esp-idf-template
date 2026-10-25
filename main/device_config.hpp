@@ -1,7 +1,7 @@
 #pragma once
 
-#include "espkit/domain/timed_output.hpp"
-#include "espkit/domain/types.hpp"
+#include "domain/timed_output.hpp"
+#include "domain/types.hpp"
 
 #include <cstdint>
 
@@ -17,11 +17,11 @@ inline constexpr unsigned sensor_priority = 3;
 inline constexpr unsigned control_priority = 4;
 inline constexpr unsigned reporter_priority = 2;
 
-inline constexpr espkit::domain::OutputPolicy output_policy{};
+inline constexpr domain::OutputPolicy output_policy{};
 inline constexpr float synthetic_reading = 42.0F;
-inline constexpr espkit::domain::Milliseconds network_period_ms = 1000;
-inline constexpr espkit::domain::Milliseconds sensor_period_ms = 500;
-inline constexpr espkit::domain::Milliseconds control_period_ms = 100;
-inline constexpr espkit::domain::Milliseconds reporter_period_ms = 2000;
+inline constexpr domain::Milliseconds network_period_ms = 1000;
+inline constexpr domain::Milliseconds sensor_period_ms = 500;
+inline constexpr domain::Milliseconds control_period_ms = 100;
+inline constexpr domain::Milliseconds reporter_period_ms = 2000;
 
 } // namespace device::defaults

@@ -4,12 +4,12 @@ Implement `OutputSink::set_enabled(bool)` and return an `OutputError`. Select th
 implementation in composition; never write GPIO in an MQTT callback.
 
 ```cpp
-class MyOutput final : public espkit::application::OutputSink {
+class MyOutput final : public application::OutputSink {
     public:
-    espkit::domain::OutputError set_enabled(bool enabled) noexcept override {
+    domain::OutputError set_enabled(bool enabled) noexcept override {
         // Apply the request through a bounded driver operation.
         // Return hardware_fault or unavailable on failure.
-        return espkit::domain::OutputError::unavailable;
+        return domain::OutputError::unavailable;
     }
 };
 ```

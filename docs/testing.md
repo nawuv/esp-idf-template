@@ -12,7 +12,7 @@ Add domain-specific boundary tests when control rules grow.
 
 ## Target
 
-A Unity policy smoke test lives in `components/espkit_domain/test/`, with a dedicated
+A Unity policy smoke test lives in `components/domain/test/`, with a dedicated
 application in `tests/target/`. Build and flash it using:
 
 ```sh
