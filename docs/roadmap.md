@@ -7,15 +7,17 @@ constants, a dedicated composition root, simulation adapters, host tests, firmwa
 build CI, English MkDocs documentation, standalone examples, opt-in Pages/release
 automation, packaged firmware provenance, and reserved OTA partitions.
 
-## First hardware slice
+## First hardware slice (code available; hardware validation pending)
 
-Choose an ESP32-S3 board, sensor, and actuator wiring. Add board/HAL/driver components,
+Optional SHT3x, I2C adapters, NVS runtime settings, and MQTT telemetry now compile.
+Confirm the actual ESP32-S3 board, sensor, and actuator wiring. Add board/HAL/driver components,
 output error handling, interlocks, irrigation hysteresis, cooldown, and Unity tests.
 Keep smart-farm rules out of reusable networking and hardware components.
 
 ## Networking
 
-Add Wi-Fi and ESP-MQTT with owned bounded messages, a command queue, local command
+Wi-Fi and MQTT telemetry are implemented as opt-in services. Next add a bounded
+command queue, local command
 validation, TLS, telemetry, and integration tests. Do not add dependencies until
 used; then commit the managed dependency lockfile. Pin versions compatible with
 the chosen SDK baseline.

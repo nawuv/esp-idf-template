@@ -10,7 +10,7 @@ class SyntheticSensor final : public SensorSource {
     }
 
     Reading read(Milliseconds now) noexcept override {
-        return {value_, now, true};
+        return {value_, now, true, MeasurementUnit::unspecified, DataOrigin::synthetic};
     }
 
     private:

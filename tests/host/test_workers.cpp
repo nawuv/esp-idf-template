@@ -189,4 +189,22 @@ TEST(TimedOutput, StateTransitionsAreExplicit) {
     EXPECT_EQ(policy.state(), espkit::OutputState::off);
 }
 
+TEST(ControlWorker, EnforcesRuntimeEvenWhenReporterIsNeverScheduled) {
+    FakeClock clock;
+    MemorySnapshot<espkit::Reading> readings;
+    MemorySnapshot<espkit::Telemetry> telemetry;
+    Requests requests;
+    requests.enabled = true;
+    espkit::SimulatedOutput output;
+    espkit::TimedOutput policy({1000, 200});
+    espkit::ControlWorker worker(policy, clock, readings, requests, output, telemetry);
+    for (espkit::Milliseconds now = 0; now <= 1000; now += 100) {
+        clock.time = now;
+        readings.publish({42.0F, now, true});
+        worker.step();
+        EXPECT_EQ(output.enabled(), now < 1000);
+    }
+    EXPECT_TRUE(telemetry.value.fault);
+}
+
 } // namespace

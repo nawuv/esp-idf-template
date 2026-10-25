@@ -1,0 +1,24 @@
+menu "ESPKit board and sensor"
+config ESPKIT_SENSOR_SHT3X
+    bool "Use a physical SHT3x-DIS sensor instead of synthetic input"
+    default n
+    depends on IDF_TARGET_ESP32S3
+    help
+        Requires explicitly configured GPIOs and verified board wiring.
+        This does not enable any physical actuator.
+config ESPKIT_I2C_SDA_GPIO
+    int "I2C SDA GPIO (-1 disables hardware access)"
+    range -1 48
+    default -1
+    depends on ESPKIT_SENSOR_SHT3X
+config ESPKIT_I2C_SCL_GPIO
+    int "I2C SCL GPIO (-1 disables hardware access)"
+    range -1 48
+    default -1
+    depends on ESPKIT_SENSOR_SHT3X
+config ESPKIT_SHT3X_ADDRESS
+    hex "SHT3x I2C address"
+    range 0x44 0x45
+    default 0x44
+    depends on ESPKIT_SENSOR_SHT3X
+endmenu
