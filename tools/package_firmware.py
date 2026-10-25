@@ -15,11 +15,24 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def package(build: Path, output: Path, source_sha: str, sdk_version: str) -> dict:
+def image_application_version(image: bytes) -> str:
+    # ESP-IDF 5.4 app descriptor: image header (24), segment header (8),
+    # descriptor prefix (16), then the NUL-terminated version field (32).
+    if len(image) < 80 or image[0] != 0xE9 or int.from_bytes(image[32:36], 'little') != 0xABCD5432:
+        raise ValueError('missing ESP-IDF application image descriptor')
+    field = image[48:80]
+    if b'\0' not in field or field[0] == 0:
+        raise ValueError('invalid application image version field')
+    return field.split(b'\0', 1)[0].decode('ascii')
+
+
+def package(build: Path, output: Path, source_sha: str, sdk_version: str, expected_version: str | None = None) -> dict:
     if not re.fullmatch(r'[0-9a-f]{40}', source_sha):
         raise ValueError('source SHA must be a full Git commit SHA')
     build = build.resolve()
     description = json.loads((build / 'project_description.json').read_text())
+    if expected_version is not None and description['project_version'] != expected_version:
+        raise ValueError('firmware version does not match the planned version')
     flash = json.loads((build / 'flasher_args.json').read_text())
     files = {}
     names = {'flash_args', 'flasher_args.json', *flash['flash_files'].values()}
@@ -33,6 +46,9 @@ def package(build: Path, output: Path, source_sha: str, sdk_version: str) -> dic
         if name not in ('flash_args', 'flasher_args.json') and path.suffix != '.bin':
             raise ValueError(f'expected a firmware binary: {name}')
         files[path.as_posix()] = resolved.read_bytes()
+    application = files.get(description['app_bin'])
+    if application is None or image_application_version(application) != description['project_version']:
+        raise ValueError('application image version differs from build description')
     target = description['target']
     if target != flash['extra_esptool_args']['chip']:
         raise ValueError('build target and flashing target do not match')
@@ -89,8 +105,9 @@ def main() -> None:
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--source-sha', required=True)
     parser.add_argument('--sdk-version', required=True)
+    parser.add_argument('--expected-version')
     args = parser.parse_args()
-    manifest = package(args.build_dir, args.output, args.source_sha, args.sdk_version)
+    manifest = package(args.build_dir, args.output, args.source_sha, args.sdk_version, args.expected_version)
     print(f"Packaged {manifest['project_name']} ({manifest['target']}) at {args.output}")
 
 

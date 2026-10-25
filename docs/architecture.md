@@ -21,6 +21,8 @@ is a C++ name boundary. Public headers mirror their owning namespace.
 
 For example, `espkit::drivers::Sht3xSensor` is declared in
 `components/espkit_drivers/include/espkit/drivers/sht3x.hpp`.
+The prefix applies to these registered build-component directories, not every folder.
+Header paths use `espkit/application/...`, not `espkit/espkit_application/...`.
 Avoid generic `core`, `utils`, and `common` buckets. Do not add a component or a
 namespace for each class. Split components when independent reuse or dependencies
 justify a new build boundary.
