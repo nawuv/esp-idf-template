@@ -4,7 +4,8 @@
 
 Portable types, injected workers, output state machine/error handling, component-owned
 constants, a dedicated composition root, simulation adapters, host tests, firmware
-build CI, English documentation, and reserved OTA partitions.
+build CI, English MkDocs documentation, standalone examples, opt-in Pages/release
+automation, packaged firmware provenance, and reserved OTA partitions.
 
 ## First hardware slice
 
@@ -38,8 +39,8 @@ management backend. Keep credentials out of CI artifacts.
 
 ## Reuse and publishing
 
-Add independently buildable sensor-node and actuator-node examples once their
-adapters exist. Enable GitHub's template repository setting, review the MIT
+Simulation, sensor-node, and actuator-node examples now build independently.
+Enable GitHub's template repository setting, review the MIT
 license, verify a new repository can build without secrets, then tag the first release.
 Keep CI action commits and the build image digest pinned when upgrading dependencies.
 

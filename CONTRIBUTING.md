@@ -18,3 +18,13 @@ function bodies/enums, and separated definition blocks. Access labels are indent
 4 spaces, matching member declarations. Namespace contents are not indented.
 Never commit secrets, generated build outputs, or personal SDK configuration.
 Keep new abstractions tied to a concrete use case and document public contracts.
+
+## Documentation, examples, and releases
+
+Run `mkdocs build --strict` after installing `requirements-docs.txt`. Build examples
+with `idf.py -C examples/<name> build` after setting the ESP32-S3 target. Test bundle
+packaging with `python3 -m unittest discover -s tests/tools -v`.
+
+Use Node 24.22.1 and `npm ci --ignore-scripts && npm run check:release` for automation
+changes. Node is development tooling, not a firmware dependency. Work from develop
+and use Conventional Commit messages; see `docs/releases.md` and `docs/repository-setup.md`.

@@ -1,6 +1,6 @@
-#include "iot/application/workers.hpp"
+#include "espkit/application/workers.hpp"
 
-namespace iot {
+namespace espkit {
 
 void SensorWorker::step() noexcept {
     readings_.publish(sensor_.read(clock_.now()));
@@ -35,4 +35,4 @@ void ReporterWorker::step() noexcept {
     }
 }
 
-} // namespace iot
+} // namespace espkit

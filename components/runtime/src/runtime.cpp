@@ -1,20 +1,21 @@
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "iot/runtime/adapters.hpp"
+#include "espkit/runtime/adapters.hpp"
 
 #include <limits>
 
-namespace iot {
+namespace espkit {
 
 Milliseconds EspClock::now() const noexcept {
     return esp_timer_get_time() / runtime_constants::microseconds_per_millisecond;
 }
 
 void LogTelemetry::report(const Telemetry& value) noexcept {
-    ESP_LOGI(
-        "iot_runtime", "mode=simulation uptime_ms=%lld requested=%d applied=%d fault=%d error=%d",
-        static_cast<long long>(value.uptime), value.output_requested,
-        static_cast<int>(value.applied_output), value.fault, static_cast<int>(value.output_error));
+    ESP_LOGI("espkit_runtime",
+             "mode=simulation uptime_ms=%lld requested=%d applied=%d fault=%d error=%d",
+             static_cast<long long>(value.uptime), value.output_requested,
+             static_cast<int>(value.applied_output), value.fault,
+             static_cast<int>(value.output_error));
 }
 
 bool PeriodicTask::start() noexcept {
@@ -48,4 +49,4 @@ void PeriodicTask::entry(void* context) {
     }
 }
 
-} // namespace iot
+} // namespace espkit

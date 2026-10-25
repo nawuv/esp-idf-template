@@ -1,0 +1,46 @@
+site_name: ESPKit
+site_description: A portable C++20 foundation for ESP32 devices, sensors, and actuators.
+repo_url: !ENV [REPOSITORY_URL, 'https://github.com/nawuv/esp-idf-template']
+edit_uri: edit/develop/docs/
+strict: true
+theme:
+  name: mkdocs
+  color_mode: auto
+  nav_style: dark
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - fenced_code
+  - tables
+  - toc:
+      permalink: true
+extra_css:
+  - stylesheets/extra.css
+nav:
+  - Home: index.md
+  - Get Started:
+      - Installation: getting-started/installation.md
+      - Create Your Project: getting-started/create-project.md
+      - Build and Run: getting-started/build-and-run.md
+      - Troubleshooting: getting-started/troubleshooting.md
+  - Architecture:
+      - Overview: architecture.md
+      - Board Porting: board-porting.md
+      - Safety: safety.md
+      - MQTT Contract: mqtt-contract.md
+      - Cluster and Swarm: distributed-systems.md
+  - Tutorials:
+      - Replace a Sensor: tutorials/replace-sensor.md
+      - Add an Output: tutorials/add-output.md
+      - Configure Your Device: tutorials/configuration.md
+  - Examples: examples.md
+  - Testing: testing.md
+  - Project:
+      - Contributing: contributing.md
+      - Releases and Branches: releases.md
+      - Repository Setup: repository-setup.md
+      - Roadmap: roadmap.md
+      - Decisions:
+          - Portable Control: decisions/0001-portable-control-and-simulation.md
+          - Injected Workers: decisions/0002-injected-workers-and-composition.md
