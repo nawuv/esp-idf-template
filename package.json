@@ -1,0 +1,18 @@
+{
+  "name": "esp-idf-template-automation",
+  "private": true,
+  "description": "Development tooling only; firmware is built with ESP-IDF and CMake.",
+  "engines": {
+    "node": ">=24.10.0 <25"
+  },
+  "scripts": {
+    "release": "semantic-release",
+    "check:release": "node --check release.config.mjs && node tools/check_release.mjs"
+  },
+  "devDependencies": {
+    "semantic-release": "25.0.9",
+    "@semantic-release/commit-analyzer": "13.0.1",
+    "@semantic-release/release-notes-generator": "14.1.1",
+    "@semantic-release/github": "12.0.10"
+  }
+}

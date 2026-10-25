@@ -32,4 +32,19 @@ When networking is added, run a local test broker and inject disconnects, invali
 credentials, duplicate and expired commands, fragmented payloads, queue pressure,
 and simultaneous reconnects. Observe control deadlines while the network is busy.
 
-CI compiles firmware and executes host tests. It does not claim on-device validation.
+CI compiles the root firmware, Unity application, and all three examples. It runs
+host tests, firmware bundle integrity tests, release-rule checks, formatting, and
+strict documentation builds. It does not claim on-device validation.
+
+## Packaging and release rules
+
+```sh
+python3 -m unittest discover -s tests/tools -v
+npm ci --ignore-scripts
+npm run check:release
+```
+
+The Python tests verify archive paths, binary checksums, reproducible bundles,
+and rejection of path traversal/target mismatch. Node 24 tooling checks that docs
+skip a release and fix/feature/breaking commits produce the intended version level.
+Live GitHub publishing still requires repository access and activation settings.

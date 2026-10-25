@@ -32,17 +32,20 @@ def main() -> int:
         parser.error(f'clang-format 18 is required; found {version.strip()}')
 
     changed = []
-    for directory in ('components', 'main', 'tests'):
+    for directory in ('components', 'main', 'tests', 'examples'):
         for path in sorted((ROOT / directory).rglob('*')):
             if path.suffix not in ('.hpp', '.cpp', '.h', '.c'):
                 continue
             if any(part.startswith('build') or part == 'managed_components' for part in path.relative_to(ROOT).parts):
                 continue
             original = path.read_text()
-            formatted = subprocess.check_output(
-                [formatter, '--style=file', f'--assume-filename={path}'],
-                input=declaration_spacing(original), text=True,
-            )
+            formatted = original
+            # A first pass may add namespace comments; normalize those boundaries too.
+            for _ in range(2):
+                formatted = subprocess.check_output(
+                    [formatter, '--style=file', f'--assume-filename={path}'],
+                    input=declaration_spacing(formatted), text=True,
+                )
             if formatted != original:
                 changed.append(str(path.relative_to(ROOT)))
                 if not args.check:

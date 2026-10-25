@@ -14,9 +14,12 @@ Implemented:
 - ESP32-S3 build workflow and host test workflow.
 - Unity target-test application (execution requires hardware).
 - A 4 MiB flash layout reserving two OTA application slots.
+- MkDocs documentation, tutorials, and standalone simulation/sensor/actuator examples.
+- Same-run firmware bundles with checksums and source manifests.
+- Opt-in GitHub Pages deployment and semantic-release on validated main pushes.
 
 Planned: board drivers, Wi-Fi/MQTT, provisioning, persistent configuration,
-OTA download/health confirmation, hardware-driver tests, and additional examples.
+OTA download/health confirmation, hardware-driver tests, and networking/smart-farm examples.
 These features are not implemented by placeholder folders.
 
 **Do not connect this starter firmware to a live pump.** Hardware output control
@@ -66,11 +69,34 @@ bash tools/test-host.sh
 | `components/composition/` | Concrete object construction, defaults, and dependency wiring |
 | `tests/host/` | GoogleTest tests built without ESP-IDF |
 | `docs/` | Architecture, protocols, safety, and roadmap |
-| `.github/workflows/` | Host tests and firmware builds |
+| `examples/` | Three standalone simulation projects |
+| `.github/workflows/` | Tests, example builds, docs, and opt-in deployment/release |
 
 Start with [Architecture](docs/architecture.md), [Porting](docs/board-porting.md),
 [MQTT contract](docs/mqtt-contract.md), [Distributed evolution](docs/distributed-systems.md),
 and [Roadmap](docs/roadmap.md).
+
+## Documentation and examples
+
+Read [Getting Started](docs/getting-started/installation.md), [Examples](docs/examples.md),
+and [Releases and Branches](docs/releases.md). Preview the English site locally:
+
+```sh
+python3 -m venv .venv-docs
+. .venv-docs/bin/activate
+python -m pip install -r requirements-docs.txt
+mkdocs serve
+```
+
+Standalone projects live in `examples/simulation`, `examples/sensor-node`, and
+`examples/actuator-node`. Each has its own README and is compiled in CI.
+
+Development flows through `feature/* -> develop -> main`. Keep main as the stable
+template default. CI builds and tests without secrets. Set `ENABLE_PAGES=true` and/or
+`ENABLE_RELEASES=true` as **repository variables** after completing
+[repository setup](docs/repository-setup.md). Services remain disabled in new copies
+until configured. Main pushes evaluate releases after all checks; docs-only changes
+normally do not create a new version.
 
 ## Customize
 
