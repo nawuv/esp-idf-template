@@ -35,7 +35,7 @@ The state machine owns off/running/fault transitions. It checks measurement age
 and maximum continuous runtime using the injected monotonic time. It knows nothing
 about GPIO, Wi-Fi, MQTT, or FreeRTOS. Workers own the calls to external ports.
 
-## 5. Scheduling: platform/adapters.hpp and runtime.cpp
+## 5. Scheduling: platform/periodic_task.hpp, snapshot.hpp, and runtime.cpp
 
 `PeriodicTask` repeatedly calls a worker's `step()` and yields until its next period.
 Sensor reads can wait without stopping the separately scheduled local controller.
@@ -43,9 +43,10 @@ Sensor reads can wait without stopping the separately scheduled local controller
 
 ## 6. Optional networking
 
-The composition root injects `WifiStation` and `MqttTelemetry` into `NetworkService`.
-The network task loads NVS settings, connects Wi-Fi, waits for TLS time readiness,
-and starts MQTT. The reporter logs status and attempts bounded telemetry enqueue.
+The composition root loads NVS settings with `NvsConfigStore` before starting tasks.
+It injects `WifiStation`, `MqttTelemetry`, and `SntpTime` through portable connection
+ports into `NetworkService`. The network task connects Wi-Fi, waits for TLS time
+readiness, and starts MQTT. The reporter logs status and attempts bounded telemetry enqueue.
 Offline reports are dropped; reconnection does not replay old measurements.
 
 These adapters live for the entire boot. Initialization failure leaves networking
@@ -59,8 +60,8 @@ and physical safety still require the [hardware acceptance checks](hardware-mqtt
 | Select a different sensor/output | `main/device.cpp` |
 | Change periods, policy, task budgets | `main/device_config.hpp` |
 | Change wiring | `main/boards/esp32s3/board_config.hpp` and Kconfig |
-| Add a portable driver | `components/espkit_drivers/` |
-| Change local safety rules | `components/espkit_domain/` and host tests |
-| Change MQTT encoding/connection | `components/espkit_networking/` |
+| Add a portable driver | `components/drivers/` |
+| Change local safety rules | `components/domain/` and host tests |
+| Change MQTT encoding/connection | `components/networking/` |
 
 Read [Architecture](architecture.md) for dependency rules before adding cross-component includes.

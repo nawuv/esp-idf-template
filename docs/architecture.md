@@ -5,24 +5,25 @@ Start with [Code walkthrough](code-walkthrough.md) for the execution order.
 
 ## Names and directories
 
-Every registered project component uses `espkit_` to avoid collisions with ESP-IDF
-components such as `hal`. A component is a build/dependency boundary; a namespace
-is a C++ name boundary. Public headers mirror their owning namespace.
+Project components use their responsibility as their name. A component is a
+build/dependency boundary; a namespace is a C++ name boundary. Public headers
+mirror their owning namespace. Check for SDK component collisions when adding names.
 
 | Component | Namespace | Responsibility |
 | --- | --- | --- |
-| `espkit_domain` | `espkit::domain` | Measurements, status, and timed-output safety policy |
-| `espkit_application` | `espkit::application` | Portable ports and single-step workers |
-| `espkit_drivers` | `espkit::drivers` | Synthetic/SHT3x inputs and simulated output |
-| `espkit_platform` | `espkit::platform` | ESP-IDF I2C, monotonic clock, FreeRTOS queues/tasks, log sink |
-| `espkit_configuration` | `espkit::configuration` | Network settings validation and NVS loading |
-| `espkit_networking` | `espkit::networking` | Wi-Fi lifecycle, MQTT telemetry, and connection coordination |
+| `domain` | `domain` | Measurements, status, and timed-output safety policy |
+| `application` | `application` | Portable ports and single-step workers |
+| `drivers` | `drivers` | Synthetic/SHT3x inputs and simulated output |
+| `platform` | `platform` | ESP-IDF I2C, monotonic clock, FreeRTOS queues/tasks, log sink |
+| `configuration` | `configuration` | Network settings validation and NVS loading |
+| `networking` | `networking` | Wi-Fi lifecycle, MQTT telemetry, and connection coordination |
 | `main/` | `device` | Product selection, board settings, task budgets, and object wiring |
 
-For example, `espkit::drivers::Sht3xSensor` is declared in
-`components/espkit_drivers/include/espkit/drivers/sht3x.hpp`.
-The prefix applies to these registered build-component directories, not every folder.
-Header paths use `espkit/application/...`, not `espkit/espkit_application/...`.
+For example, `drivers::Sht3xSensor` is declared in
+`components/drivers/include/drivers/sht3x.hpp`.
+Header paths use `application/...`. Kconfig symbols retain `ESPKIT_` because
+they share a global configuration namespace; the stored NVS namespace remains
+`espkit` to preserve provisioned settings.
 Avoid generic `core`, `utils`, and `common` buckets. Do not add a component or a
 namespace for each class. Split components when independent reuse or dependencies
 justify a new build boundary.
@@ -59,7 +60,7 @@ This is a lightweight boundary check, not a general C++ dependency analyzer.
 
 No DI container, service locator, Singleton, generic event bus, or factory hierarchy
 is required. A replaceable control-policy interface should wait until a second
-policy needs it. Network coordination uses explicit state and flags rather than
+policy needs it. Network coordination uses an explicit state enum rather than
 one dynamically allocated object per state.
 
 ## Lifetime and concurrency
@@ -75,11 +76,14 @@ Two length-one FreeRTOS queues carry latest-value snapshots; reads do not consum
 them. Overwrite is intentional. Commands need a separate bounded FIFO and rejection
 semantics. Startup seeds a reading and applies safe OFF before tasks start.
 
-Only the network task calls `NetworkService::step()`. It loads configuration once,
-steps `WifiStation`, waits for TLS wall-time readiness, then starts `MqttTelemetry`.
+Before any tasks start, the composition root loads validated settings through
+`configuration::NvsConfigStore` and passes a copy to `NetworkService::configure()`.
+Only the network task calls `NetworkService::step()`. It steps `WifiStation`, waits
+for injected `NetworkTime` readiness, then starts `MqttTelemetry`. The service
+uses portable connection ports; `SntpTime` owns the SDK time-sync calls.
 The reporter calls `NetworkService::report()`, which gates transmission on Wi-Fi
 state and delegates to MQTT. Wi-Fi and MQTT callbacks update atomic adapter state;
-retry timing and initialization flags belong to the network worker. MQTT's callback
+retry timing and initialization state belong to the network worker. MQTT's callback
 also enqueues retained online availability. MQTT config references remain valid
 because `NetworkService` owns its settings for the boot lifetime.
 
@@ -120,5 +124,12 @@ directives; local aliases are acceptable in composition `.cpp` files. Use RAII
 where lifetime is supported, borrowed references for injected dependencies, and
 monotonic time for safety. Run `python3 tools/format.py` with clang-format 18.
 
-See [ADR 0003](decisions/0003-layered-components.md) for migration details and
+See [ADR 0004](decisions/0004-portable-component-api.md) for migration details and
 [Cluster and swarm evolution](distributed-systems.md) for future boundaries.
+
+## Host build
+
+Host tests add the component directories with `add_subdirectory()` and link their
+library targets. Each component declares its portable sources once for both builds;
+ESP-IDF adds SDK adapter sources. Configuration validation and network coordination
+are included in the portable host targets.

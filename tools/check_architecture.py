@@ -19,14 +19,14 @@ PORTABLE = {'domain', 'application', 'drivers'}
 def main() -> int:
     errors = []
     for layer, allowed in ALLOWED.items():
-        component = ROOT / 'components' / f'espkit_{layer}'
+        component = ROOT / 'components' / layer
         for path in component.rglob('*'):
             if not path.is_file() or 'test' in path.parts or path.suffix not in {'.hpp', '.cpp'}:
                 continue
             source = path.read_text()
             for include in re.findall(r'^\s*#include\s+"([^"]+)"', source, re.M):
-                if include.startswith('espkit/'):
-                    dependency = include.split('/')[1]
+                if include.split('/')[0] in ALLOWED:
+                    dependency = include.split('/')[0]
                     if dependency not in allowed | {layer}:
                         errors.append(f'{path.relative_to(ROOT)}: forbidden include {include}')
                 elif layer in PORTABLE:
@@ -34,15 +34,12 @@ def main() -> int:
             if path.suffix == '.hpp' and re.search(r'\busing\s+namespace\b', source):
                 errors.append(f'{path.relative_to(ROOT)}: public using-namespace directive')
         cmake = (component / 'CMakeLists.txt').read_text()
-        for dependency in re.findall(r'\bespkit_(\w+)\b', cmake):
-            if dependency not in allowed | {layer}:
-                errors.append(f'espkit_{layer}: forbidden component dependency espkit_{dependency}')
-        if layer in PORTABLE:
-            match = re.search(r'(?:PRIV_)?REQUIRES\s+([^)]*)', cmake)
-            if match:
-                for dependency in match[1].split():
-                    if not dependency.startswith('espkit_'):
-                        errors.append(f'espkit_{layer}: nonportable component dependency {dependency}')
+        for match in re.finditer(r'(?:PRIV_)?REQUIRES\s+([^)]*)', cmake):
+            for dependency in match[1].split():
+                if dependency in ALLOWED and dependency not in allowed | {layer}:
+                    errors.append(f'{layer}: forbidden component dependency {dependency}')
+                elif layer in PORTABLE and dependency not in ALLOWED:
+                    errors.append(f'{layer}: nonportable component dependency {dependency}')
     for error in errors:
         print(error)
     if not errors:

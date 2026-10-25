@@ -11,8 +11,8 @@ owns names such as `hal`, making unprefixed components risky.
 
 ## Decision
 
-Use `espkit::{domain,application,drivers,platform,configuration,networking}` and
-matching `espkit_*` build components. Domain owns portable values and policy;
+Use `{domain,application,drivers,platform,configuration,networking}` namespaces.
+Build-component names originally used `espkit_*`; ADR 0004 removes that prefix. Domain owns portable values and policy;
 application owns consumed ports/workers. Concrete adapters implement these ports.
 Move product wiring, board settings, and task budgets to `main/` under `device`.
 Split networking into injected `WifiStation`, `MqttTelemetry`, and `NetworkService`.

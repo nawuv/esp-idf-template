@@ -64,12 +64,12 @@ bash tools/test-host.sh
 | Path | Responsibility |
 | --- | --- |
 | `main/` | Entry point, concrete wiring, board settings, and task budgets |
-| `components/espkit_domain/` | Portable measurements, status, and safety policy |
-| `components/espkit_application/` | Portable ports and workers |
-| `components/espkit_drivers/` | Synthetic/SHT3x sensors and simulated output |
-| `components/espkit_platform/` | ESP-IDF I2C, FreeRTOS scheduling/queues, clock, and logs |
-| `components/espkit_configuration/` | Validated runtime NVS network settings |
-| `components/espkit_networking/` | Wi-Fi, MQTT telemetry, and connection coordination |
+| `components/domain/` | Portable measurements, status, and safety policy |
+| `components/application/` | Portable ports and workers |
+| `components/drivers/` | Synthetic/SHT3x sensors and simulated output |
+| `components/platform/` | ESP-IDF I2C, FreeRTOS scheduling/queues, clock, and logs |
+| `components/configuration/` | Validated runtime NVS network settings |
+| `components/networking/` | Wi-Fi, MQTT telemetry, and connection coordination |
 | `tests/host/` | GoogleTest tests built without ESP-IDF |
 | `docs/` | Architecture, protocols, safety, and roadmap |
 | `examples/` | Three standalone simulation projects |
@@ -107,7 +107,7 @@ Firmware versions are calculated before compilation and checked again before pub
 
 ## Customize
 
-- Rename `espkit_device` in the root CMake project.
+- Rename `device` in the root CMake project.
 - Select sensor/output/reporting implementations in `main/device.cpp`.
 - Adjust sampling periods, task budgets, and selected safety policy in `main/device_config.hpp`.
 - Add board wiring before implementing a physical output.

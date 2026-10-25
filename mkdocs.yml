@@ -48,3 +48,4 @@ nav:
           - Portable Control: decisions/0001-portable-control-and-simulation.md
           - Injected Workers: decisions/0002-injected-workers-and-composition.md
           - Layered Components: decisions/0003-layered-components.md
+          - Portable Component API: decisions/0004-portable-component-api.md
