@@ -99,8 +99,10 @@ memory when its fields validate. A newer schema is used only through those schem
 
 The composition root owns `WifiStation`, `MqttTelemetry`, `SntpTime`, and
 `NetworkService` for the boot and injects the first three through portable
-connection ports. `configure` copies the settings once. The network task then
-calls `step`.
+connection ports. The composition root calls `configure` once before tasks
+start. After that, only the network worker calls it, and only from `stopped`,
+which replaces the owned copy without leaving `stopped` or writing NVS. Other
+states ignore it. The network task then calls `step`.
 
 `step` starts Wi-Fi, starts SNTP when the broker URI is `mqtts://`, and starts
 MQTT only after the link is up and, for TLS, the wall clock is ready. `stop`

@@ -91,10 +91,13 @@ tasks start.
 `DeviceRuntime` owns `WifiStation`, `SntpTime`, `MqttTelemetry`, and
 `NetworkService` for the boot. `stop` does not destroy those objects. Before any
 tasks start, the composition root loads validated settings through
-`configuration::NvsConfigStore` and passes a copy to `NetworkService::configure()`.
-That call is ignored after the service leaves `disabled`; a later restart reuses
-the owned copy. After startup, only the network task calls `start`, `stop`,
-`step`, and `state`.
+`configuration::NvsConfigStore` and passes a copy to `NetworkService::configure()`
+on the startup thread. That call is accepted from `disabled` and moves the
+service to `starting`. After the network task starts, that task is the only
+caller of `configure`, `start`, `stop`, `step`, and `state`. A later `configure`
+is accepted only from `stopped`: it replaces the owned copy, stays `stopped`
+until `start`, and does not write NVS. There is no second writer. Every other
+state ignores `configure`.
 
 `step` starts Wi-Fi, then SNTP when the URI is `mqtts://`, waits for the link and
 for injected `NetworkTime` readiness, then starts MQTT. `stop` releases in the
@@ -123,6 +126,8 @@ stopping. The MQTT adapter serializes use of the client pointer. Wi-Fi and MQTT
 callbacks only update atomics. The network worker enqueues retained online
 availability after the callback records a connection. Config strings remain
 valid because `NetworkService` owns its settings for the boot lifetime.
+Replacing that copy is allowed only from `stopped`, after `stop` has released
+the MQTT client that borrowed the strings.
 
 `NetworkService::stop` does not read the sensor and does not change the output.
 `application::OutputQuiesce` submits one local stop and polls `applied_output`.

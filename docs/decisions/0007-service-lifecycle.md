@@ -1,7 +1,9 @@
 # ADR 0007: Restartable lifecycle for the network stack
 
 Status: accepted. Supersedes the "initialization failure is terminal until reboot"
-sentence in [ADR 0004](0004-portable-component-api.md).
+sentence in [ADR 0004](0004-portable-component-api.md), the boot-once composition
+limit in [ADR 0002](0002-injected-workers-and-composition.md), and the one-shot
+startup limit in [ADR 0003](0003-layered-components.md).
 
 ## Context
 
@@ -45,10 +47,12 @@ no class per state, no service locator, and no lifecycle event bus.
 | `waiting_for_mqtt` | Link and clock are ready, or the last MQTT `start` failed. |
 | `running` | MQTT `start` succeeded. Link loss stays here. |
 | `failed` | Wi-Fi `start` failed, or SNTP used its session budget without a wall clock. Resources are released. `step` retries after `network_init_retry_ms`. |
-| `stopped` | `stop` ran. Resources are released. `step` does not retry. |
+| `stopped` | `stop` ran. Resources are released. `step` does not retry. `configure` may replace the owned copy. |
 
-`configure` copies settings only from `disabled`. Later calls are ignored, so a
-restart cannot race a new copy. `start` is legal from `stopped` and `failed`;
+`configure` copies settings from `disabled` and replaces the owned copy from
+`stopped`. The `stopped` call stays `stopped` until `start` and does not write
+NVS. Every other state ignores `configure`, so a running client cannot race a
+new copy. `start` is legal from `stopped` and `failed`;
 the next `step` brings the stack up. `stop` from anything except `disabled`
 releases resources and lands on `stopped`, which cancels the automatic retry.
 Calling `stop` again is safe and releases again, so a cleanup the SDK refused
@@ -111,9 +115,11 @@ The station adapter does not call `esp_netif_create_default_wifi_sta`. It calls
 
 `DeviceRuntime` in `main/device.cpp` owns the four network objects for the boot.
 It does not destroy them on `stop`, and it does not stop the sensor, control, or
-reporter tasks. `configure` runs on the startup thread before tasks exist. After
-that, the network worker is the only caller of `start`, `stop`, `step`, and
-`state`. The reporter may call `report` during `stop`. `MqttTelemetry` keeps the
+reporter tasks. The first `configure` runs on the startup thread before tasks
+exist. After that, the network worker is the only caller of `configure`,
+`start`, `stop`, `step`, and `state`. A later `configure` only replaces the
+owned copy from `stopped`. The composition root does not call it again. The
+reporter may call `report` during `stop`. `MqttTelemetry` keeps the
 client pointer behind a mutex, clears the pointer, then unlocks before
 `esp_mqtt_client_stop` and `destroy`, so the MQTT task callback (atomics only)
 cannot deadlock on that mutex. If those calls fail, the pointer is stored again
@@ -168,9 +174,10 @@ already covered by GoogleTest.
 - **Retry a failed start in a tight loop, or reboot the chip from `failed`.**
   The network task already wakes on a one-second period. The retry waits five
   seconds on the monotonic clock. A reboot would stop independent workers.
-- **Automatic reconfigure from NVS on every retry.** Settings are copied once.
-  Reloading them is a configuration-schema concern, not a lifecycle one, and a
-  second writer would race the network worker.
+- **Automatic reconfigure from NVS on every retry.** Reloading flash on the
+  retry path is a configuration-schema concern, not a lifecycle one, and a
+  second writer would race the network worker. Replacing the owned copy is an
+  explicit `configure` from `stopped` on that worker, not an NVS read.
 - **Persist the phase in NVS.** A phase describes RAM and SDK objects that do
   not exist after reboot. The boot always starts from `idle`.
 
@@ -187,9 +194,10 @@ open a second session in that case. `NetworkService` now takes an
 up until reboot" should call `stop` when they want the retry suppressed. A
 stalled wall clock also enters `failed` after the SNTP session budget.
 
-`configure` still cannot replace settings after startup. Changing credentials
-without a reboot needs a later change that allows `configure` from `stopped`
-only, on the network worker.
+`configure` from `stopped` replaces the owned settings and leaves the service
+`stopped` until `start`. After startup the network worker is the only caller.
+The call does not write NVS, and there is no second writer. Every other state
+still ignores `configure`.
 
 `esp_mqtt_client_stop` must not run on the MQTT task. The network worker is the
 caller, and it is also the caller of `esp_mqtt_client_enqueue` for retained

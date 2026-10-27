@@ -373,6 +373,103 @@ TEST_F(NetworkServiceTest, StopAfterFailureCancelsTheAutomaticRetry) {
     EXPECT_EQ(wifi.starts, 1);
 }
 
+TEST_F(NetworkServiceTest, ConfigureAfterStopReplacesSettingsAndStaysStopped) {
+    reach_running();
+    service.stop();
+    std::strcpy(config.wifi_ssid, "replacement");
+    std::strcpy(config.mqtt_uri, "mqtt://broker.example");
+    service.configure(config);
+    EXPECT_EQ(service.state(), networking::NetworkState::stopped);
+    clock.time = networking::network_init_retry_ms;
+    service.step();
+    EXPECT_EQ(service.state(), networking::NetworkState::stopped);
+    EXPECT_EQ(wifi.starts, 1);
+
+    service.start();
+    wifi.online = true;
+    service.step();
+    EXPECT_EQ(wifi.ssid, "replacement");
+    EXPECT_EQ(time.begins, 1);
+    EXPECT_EQ(mqtt.starts, 2);
+    EXPECT_EQ(service.state(), networking::NetworkState::running);
+
+    service.stop();
+    std::strcpy(config.wifi_ssid, "second");
+    std::strcpy(config.mqtt_uri, "mqtts://other.example");
+    service.configure(config);
+    EXPECT_EQ(service.state(), networking::NetworkState::stopped);
+    service.step();
+    EXPECT_EQ(wifi.starts, 2);
+
+    service.start();
+    wifi.online = true;
+    time.synchronized = false;
+    service.step();
+    EXPECT_EQ(wifi.ssid, "second");
+    EXPECT_EQ(wifi.starts, 3);
+    EXPECT_EQ(time.begins, 2);
+    EXPECT_EQ(mqtt.starts, 2);
+    EXPECT_EQ(service.state(), networking::NetworkState::waiting_for_time);
+}
+
+TEST_F(NetworkServiceTest, ConfigureIsIgnoredOutsideDisabledAndStopped) {
+    configuration::NetworkConfig other = config;
+    std::strcpy(other.wifi_ssid, "other-network");
+    std::strcpy(other.mqtt_uri, "mqtt://broker.example");
+
+    service.configure(config);
+    EXPECT_EQ(service.state(), networking::NetworkState::starting);
+    service.configure(other);
+    service.step();
+    EXPECT_EQ(wifi.ssid, "test-network");
+    EXPECT_EQ(time.begins, 1);
+    EXPECT_EQ(service.state(), networking::NetworkState::waiting_for_wifi);
+
+    service.configure(other);
+    wifi.online = true;
+    service.step();
+    EXPECT_EQ(service.state(), networking::NetworkState::waiting_for_time);
+    EXPECT_EQ(time.begins, 1);
+
+    service.configure(other);
+    mqtt.succeeds = false;
+    time.synchronized = true;
+    service.step();
+    EXPECT_EQ(service.state(), networking::NetworkState::waiting_for_mqtt);
+    EXPECT_EQ(wifi.ssid, "test-network");
+
+    service.configure(other);
+    mqtt.succeeds = true;
+    clock.time = networking::network_init_retry_ms;
+    service.step();
+    ASSERT_EQ(service.state(), networking::NetworkState::running);
+    EXPECT_EQ(wifi.starts, 1);
+    EXPECT_EQ(mqtt.starts, 2);
+    service.configure(other);
+    service.step();
+    EXPECT_EQ(wifi.starts, 1);
+    EXPECT_EQ(service.state(), networking::NetworkState::running);
+}
+
+TEST_F(NetworkServiceTest, ConfigureWhileFailedDoesNotReplaceSettings) {
+    wifi.succeeds = false;
+    service.configure(config);
+    service.step();
+    ASSERT_EQ(service.state(), networking::NetworkState::failed);
+    std::strcpy(config.wifi_ssid, "other-network");
+    std::strcpy(config.mqtt_uri, "mqtt://broker.example");
+    service.configure(config);
+    EXPECT_EQ(service.state(), networking::NetworkState::failed);
+    wifi.succeeds = true;
+    wifi.online = true;
+    time.synchronized = true;
+    clock.time = networking::network_init_retry_ms;
+    service.step();
+    EXPECT_EQ(wifi.ssid, "test-network");
+    EXPECT_EQ(time.begins, 1);
+    EXPECT_EQ(service.state(), networking::NetworkState::running);
+}
+
 TEST_F(NetworkServiceTest, StartWhileRunningDoesNotBringTheStackUpTwice) {
     reach_running();
     service.start();

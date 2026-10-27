@@ -15,11 +15,11 @@ inline constexpr domain::Milliseconds network_init_retry_ms = 5000;
 // releases the stack and enters failed.
 inline constexpr int network_time_session_budget = 2;
 
-// disabled has no configuration. stopped keeps the owned copy and does not
-// retry. failed keeps that copy, has released resources, and step() retries
-// after network_init_retry_ms. A stalled wall clock reaches failed the same
-// way. Link loss while running is not failed: the station and the MQTT client
-// reconnect on their own.
+// disabled has no configuration. stopped keeps the owned copy, which configure
+// may replace, and does not retry. failed keeps that copy, has released
+// resources, and step() retries after network_init_retry_ms. A stalled wall
+// clock reaches failed the same way. Link loss while running is not failed: the
+// station and the MQTT client reconnect on their own.
 enum class NetworkState {
     disabled,
     starting,
@@ -32,10 +32,11 @@ enum class NetworkState {
 };
 
 // The composition root owns this object and the injected adapters for the boot.
-// It does not destroy them on stop. The network worker is the only caller of
-// configure, start, stop, step, and state. configure runs once, on the startup
-// thread, before that worker starts. stop() does not read sensors or change
-// outputs; control keeps running on its own task.
+// It does not destroy them on stop. It calls configure once, on the startup
+// thread, before the network worker starts. After that the network worker is
+// the only caller of configure, start, stop, step, and state. configure from
+// stopped replaces the owned copy and does not write NVS. stop() does not read
+// sensors or change outputs; control keeps running on its own task.
 class NetworkService final : public application::Work, public application::TelemetrySink {
     public:
     NetworkService(WifiConnection& wifi, MqttConnection& mqtt, NetworkTime& time,
@@ -45,7 +46,8 @@ class NetworkService final : public application::Work, public application::Telem
 
     NetworkService(const NetworkService&) = delete;
     NetworkService& operator=(const NetworkService&) = delete;
-    // Ignored unless the service is disabled. Restart reuses the owned copy.
+    // From disabled, copy settings and move to starting. From stopped, replace
+    // the owned copy and stay stopped. Ignored in every other state. No NVS write.
     void configure(const configuration::NetworkConfig& config) noexcept;
     // From stopped or failed, ask the next step() to bring the stack up again.
     void start() noexcept;
