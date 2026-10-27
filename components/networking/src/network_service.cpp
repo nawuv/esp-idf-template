@@ -7,11 +7,14 @@
 namespace networking {
 
 void NetworkService::configure(const configuration::NetworkConfig& config) noexcept {
-    if (state_ != NetworkState::disabled) {
+    if (state_ != NetworkState::disabled && state_ != NetworkState::stopped) {
         return;
     }
     config_ = config;
     needs_time_ = std::strncmp(config_.mqtt_uri, "mqtts://", 8) == 0;
+    if (state_ == NetworkState::stopped) {
+        return;
+    }
     retry_not_before_ = 0;
     state_ = NetworkState::starting;
 }
