@@ -67,8 +67,11 @@ does not call OTA. The root firmware does not call it. See
 [ADR 0008](decisions/0008-output-quiesce.md).
 
 The root firmware constructs this path and does not call `submit`. MQTT does not
-subscribe. A future network adapter should parse a bounded payload, convert a
-trusted deadline into monotonic time, and call `submit` from one task.
+subscribe. `networking::decode_command_envelope` parses one bounded schema 1
+payload, converts a trusted wall-clock deadline into monotonic time, and calls
+`submit` with `CommandSource::remote`. Call that decoder from the same single
+thread that owns `submit`, after reassembly. A full result FIFO rejects a new
+enable. Subscription is still a later adapter.
 
 ### Add a command type later
 
@@ -172,7 +175,8 @@ that can fail partway and must be retryable without rebooting.
 | Change local safety rules | `components/domain/` and host tests |
 | Change command admission or add a command type | `domain/command.hpp`, `application/command_path.hpp`, and host tests |
 | Confirm output is off before a restart | `application/output_quiesce.hpp` and host tests |
-| Subscribe to remote commands later | `components/networking/`, calling `CommandIngress::submit` |
+| Decode a remote command payload | `networking/command_envelope.hpp`, then `CommandIngress::submit` |
+| Subscribe to remote commands later | `components/networking/`, calling `decode_command_envelope` |
 | Change MQTT encoding/connection | `components/networking/` |
 | Add a runtime network or identity setting | `configuration/network_config.hpp`, `settings_migration.hpp`, `NvsConfigStore`, and `tools/provision_device.py` |
 | Change network start, stop, or retry | `networking/lifecycle.hpp`, `network_service.cpp`, and the adapter `stop` path |

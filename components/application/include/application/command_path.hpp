@@ -33,8 +33,10 @@ static_assert(std::is_trivially_copyable_v<StopNotice>);
 static_assert(std::is_trivially_copyable_v<QueuedCommand>);
 static_assert(std::is_trivially_copyable_v<domain::CommandResult>);
 
-// Single-threaded admission. The FIFO and stop mailbox are the cross-task boundary.
-// Duplicate memory and sequence cursors reset on reboot; they are not stored.
+// Single-threaded admission. Reassemble a remote payload on that same worker
+// before calling submit. The FIFO and stop mailbox are the cross-task boundary.
+// A full result FIFO rejects a new enable. Duplicate memory and sequence cursors
+// reset on reboot; they are not stored.
 class CommandIngress {
     public:
     static constexpr std::size_t duplicate_history = 8;

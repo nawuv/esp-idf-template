@@ -16,7 +16,7 @@ mirror their owning namespace. Check for SDK component collisions when adding na
 | `drivers` | `drivers` | Synthetic/SHT3x inputs and simulated output |
 | `platform` | `platform` | ESP-IDF I2C, monotonic clock, FreeRTOS queues/tasks, log sink |
 | `configuration` | `configuration` | Network settings validation, schema migration, and NVS loading |
-| `networking` | `networking` | Wi-Fi lifecycle, MQTT telemetry, and connection coordination |
+| `networking` | `networking` | Wi-Fi lifecycle, MQTT telemetry, command envelopes, and connection coordination |
 | `main/` | `device` | Product selection, board settings, task budgets, and object wiring |
 
 For example, `drivers::Sht3xSensor` is declared in
@@ -81,10 +81,12 @@ without stopping local control. See [ADR 0007](decisions/0007-service-lifecycle.
 Sensor (500 ms), control (100 ms), and reporter (2000 ms) workers run independently.
 Two length-one FreeRTOS queues carry latest-value snapshots; reads do not consume
 them. Overwrite is intentional. Commands use a separate bounded FIFO that rejects
-when full, plus a one-slot stop notice. `CommandIngress::submit` is single-threaded;
-the FIFO and stop mailbox are the cross-task boundary. The default firmware does
-not call `submit`, so the output request stays off. Startup seeds a reading and
-applies safe OFF before tasks start.
+when full, plus a one-slot stop notice. `CommandIngress::submit` is single-threaded.
+Reassemble a remote payload on that worker before `decode_command_envelope` calls
+`submit`. The FIFO and stop mailbox are the cross-task boundary. A full result
+FIFO rejects a new enable. The default firmware does not call `submit`, so the
+output request stays off. Startup seeds a reading and applies safe OFF before
+tasks start.
 
 `DeviceRuntime` owns `WifiStation`, `SntpTime`, `MqttTelemetry`, and
 `NetworkService` for the boot. `stop` does not destroy those objects. Before any
