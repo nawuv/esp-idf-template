@@ -9,9 +9,23 @@ namespace networking {
 
 void SntpTime::begin() noexcept {
 #if CONFIG_ESPKIT_NETWORK_ENABLED
+    if (sntp_is_started(phase_)) {
+        return;
+    }
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
     esp_sntp_setservername(0, "pool.ntp.org");
     esp_sntp_init();
+    phase_ = SntpPhase::started;
+#endif
+}
+
+void SntpTime::stop() noexcept {
+#if CONFIG_ESPKIT_NETWORK_ENABLED
+    if (!sntp_is_started(phase_)) {
+        return;
+    }
+    esp_sntp_stop();
+    phase_ = SntpPhase::idle;
 #endif
 }
 

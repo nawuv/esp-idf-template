@@ -113,6 +113,13 @@ and no retain. Availability uses a retained online message and an offline last w
 MQTT's reconnect interval has per-device startup jitter; Wi-Fi uses exponential
 backoff with jitter. MQTT outbox storage is limited to 4096 bytes.
 
+A failed station or MQTT `start` releases the resources that attempt acquired and
+retries without rebooting. Stopping the network does not stop sensor or control
+tasks and does not change the output. The TCP/IP stack and the default event loop
+stay initialized across that restart. See
+[ADR 0007](decisions/0007-service-lifecycle.md). Hardware was not used to confirm
+the cleanup.
+
 Only the reporter calls the MQTT sink. Network initialization/retries run in a
 separate task. While offline, reports are dropped and counted; control and sensor
 snapshots continue. No remote message can directly enable an output.

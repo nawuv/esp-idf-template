@@ -82,14 +82,66 @@ The store reads the `espkit` namespace and calls portable `migrate_settings`. A
 schema 1 record is used as stored. A record with no schema key is upgraded in
 memory when its fields validate. A newer schema is used only through those schema
 1 fields. The load does not write flash. Invalid records leave networking off.
-The composition root injects `WifiStation`, `MqttTelemetry`, and `SntpTime` through
-portable connection ports into `NetworkService`. The network task connects Wi-Fi, waits for TLS time
-readiness, and starts MQTT. The reporter logs status and attempts bounded telemetry enqueue.
-Offline reports are dropped; reconnection does not replay old measurements.
 
-These adapters live for the entire boot. Initialization failure leaves networking
-unavailable while local workers continue. Real board timing, live broker outages,
-and physical safety still require the [hardware acceptance checks](hardware-mqtt.md).
+The composition root owns `WifiStation`, `MqttTelemetry`, `SntpTime`, and
+`NetworkService` for the boot and injects the first three through portable
+connection ports. `configure` copies the settings once. The network task then
+calls `step`.
+
+`step` starts Wi-Fi, starts SNTP when the broker URI is `mqtts://`, and starts
+MQTT only after the link is up and, for TLS, the wall clock is ready. `stop`
+runs the other way: MQTT client, then SNTP, then Wi-Fi. Doing it in that order
+means the clock sync and the station are not torn down while a client is still
+using them.
+
+If Wi-Fi `start` fails, the service releases every connection it may have touched
+and moves to `failed`. A later `step`, after five seconds, tries again. If MQTT
+`start` fails, only that client is released; Wi-Fi and SNTP stay up and MQTT is
+retried on its own. `stop` moves to `stopped` and does not retry until something
+calls `start`. A link that drops after a successful start is not a lifecycle
+failure: the station and the MQTT client reconnect by themselves.
+
+The objects stay allocated. What `stop` releases are the SDK resources the
+service created: the station netif, the Wi-Fi driver, its event handlers, the
+MQTT client, and the SNTP session. The TCP/IP stack and the default event loop
+stay. ESP-IDF cannot tear the TCP/IP stack down safely, and the other network
+clients share the loop. Calling `stop` twice is safe, including after `start`
+returned false.
+
+The reporter logs status and attempts a bounded telemetry enqueue. Offline
+reports are dropped; reconnection does not replay old measurements. Sensor and
+control tasks do not call this code. Stopping the network does not turn an
+output off. A future OTA path has to request safe OFF through the command path
+and see an off (or unknown, if OFF failed) status before it reboots. That path
+is not implemented.
+
+Real board timing, live broker outages, and physical safety still require the
+[hardware acceptance checks](hardware-mqtt.md). Host tests cover the transitions.
+They do not call ESP-IDF.
+
+### Add this lifecycle to another service later
+
+Do this only when a second service has the same problem: it acquires SDK resources
+that can fail partway and must be retryable without rebooting.
+
+1. Add an explicit phase enum for the resources that service acquires. Do not add
+   a class per phase, a service locator, or an event bus.
+2. Put the phase transitions in portable code and the SDK calls in the adapter.
+   `networking/lifecycle.hpp` is the pattern: host tests walk the phases, and
+   `wifi_station.cpp` performs one SDK call per phase.
+3. `start` returns false only when service-owned resources are already released,
+   or when `stop` can still see which phase was reached and finish the release.
+4. `stop` walks those phases backwards and is safe when `start` never ran and
+   safe when it is called again. Leave process-wide resources alone when the SDK
+   cannot deinitialize them or when other services share them.
+5. Call `start`, `stop`, and `step` from one worker. Do not call them from the
+   control worker, and do not stop sensor or control tasks inside `stop`.
+6. Retry a failed start from that worker's `step`, after a monotonic delay. Do
+   not tight-loop, and do not reboot.
+7. If a later operation needs the actuator off, request that through the command
+   path first. Network `stop` is not output quiescing.
+8. Add host tests for the phase order, a failed start, a second `stop`, and a
+   restart. Keep the ESP-IDF calls out of those tests.
 
 ## Where should I make a change?
 
@@ -104,5 +156,6 @@ and physical safety still require the [hardware acceptance checks](hardware-mqtt
 | Subscribe to remote commands later | `components/networking/`, calling `CommandIngress::submit` |
 | Change MQTT encoding/connection | `components/networking/` |
 | Add a runtime network or identity setting | `configuration/network_config.hpp`, `settings_migration.hpp`, `NvsConfigStore`, and `tools/provision_device.py` |
+| Change network start, stop, or retry | `networking/lifecycle.hpp`, `network_service.cpp`, and the adapter `stop` path |
 
 Read [Architecture](architecture.md) for dependency rules before adding cross-component includes.

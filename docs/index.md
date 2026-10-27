@@ -38,6 +38,7 @@ Status: **pre-alpha**, with hardware acceptance testing still pending.
 - Bounded latest-value queues, a rejecting command FIFO, and independent task scheduling.
 - Host tests, a Unity test application, and three standalone example projects.
 - Optional [SHT3x, Wi-Fi, and MQTT](hardware-mqtt.md) with versioned NVS credentials.
+  A failed network start can be released and retried without rebooting local control.
 - English documentation, formatting checks, and configurable release automation.
 
 ## What comes next

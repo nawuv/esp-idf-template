@@ -19,6 +19,7 @@ add_executable(policy_tests
     test_sht3x.cpp
     test_networking.cpp
     test_network_service.cpp
+    test_lifecycle.cpp
     test_commands.cpp
     test_settings_migration.cpp)
 target_compile_options(policy_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)

@@ -1,6 +1,8 @@
 # ADR 0004: Responsibility-based names and portable network coordination
 
 Status: accepted. Updates ADR 0003 naming and network composition.
+The sentence below that keeps initialization failure terminal until reboot is
+superseded by [ADR 0007](0007-service-lifecycle.md).
 
 ## Decision
 

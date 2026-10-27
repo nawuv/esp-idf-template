@@ -23,6 +23,13 @@ constexpr unsigned network_timeout_ms = 3000;
 
 bool MqttTelemetry::start(const configuration::NetworkConfig& config) noexcept {
 #if CONFIG_ESPKIT_NETWORK_ENABLED
+    {
+        const std::lock_guard<std::mutex> lock(publish_mutex_);
+        if (phase_ == MqttPhase::started) {
+            return true;
+        }
+    }
+    stop();
     std::snprintf(telemetry_topic_, sizeof(telemetry_topic_), "iot/v1/%s/%s/telemetry",
                   config.site_id, config.device_id);
     std::snprintf(availability_topic_, sizeof(availability_topic_), "iot/v1/%s/%s/availability",
@@ -42,16 +49,21 @@ bool MqttTelemetry::start(const configuration::NetworkConfig& config) noexcept {
     mqtt.network.timeout_ms = network_timeout_ms;
     mqtt.outbox.limit = outbox_limit_bytes;
     auto client = esp_mqtt_client_init(&mqtt);
-    if (!client) {
+    if (client == nullptr) {
         return false;
     }
-    client_.store(client);
+    {
+        const std::lock_guard<std::mutex> lock(publish_mutex_);
+        client_.store(client);
+        phase_ = MqttPhase::created;
+    }
     if (esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, event, this) != ESP_OK ||
         esp_mqtt_client_start(client) != ESP_OK) {
-        client_.store(nullptr);
-        esp_mqtt_client_destroy(client);
+        stop();
         return false;
     }
+    const std::lock_guard<std::mutex> lock(publish_mutex_);
+    phase_ = MqttPhase::started;
     return true;
 #else
     (void)config;
@@ -59,12 +71,40 @@ bool MqttTelemetry::start(const configuration::NetworkConfig& config) noexcept {
 #endif
 }
 
+void MqttTelemetry::stop() noexcept {
+#if CONFIG_ESPKIT_NETWORK_ENABLED
+    esp_mqtt_client_handle_t client = nullptr;
+    MqttPhase phase = MqttPhase::idle;
+    {
+        const std::lock_guard<std::mutex> lock(publish_mutex_);
+        client = client_.exchange(nullptr);
+        phase = phase_;
+        phase_ = MqttPhase::idle;
+        mqtt_up_.store(false);
+    }
+    // Unlock before the SDK calls. stop() can wait for the MQTT task, and that
+    // task's callback only reads atomics, so it must not need this mutex.
+    const auto cleanup = mqtt_cleanup(phase);
+    if (client == nullptr) {
+        return;
+    }
+    if (cleanup.stop_client) {
+        esp_mqtt_client_stop(client);
+    }
+    if (cleanup.destroy_client) {
+        esp_mqtt_client_destroy(client);
+    }
+#endif
+}
+
 void MqttTelemetry::event(void* context, esp_event_base_t, std::int32_t id, void*) {
     auto& self = *static_cast<MqttTelemetry*>(context);
     if (id == MQTT_EVENT_CONNECTED) {
         self.mqtt_up_.store(true);
-        esp_mqtt_client_enqueue(self.client_.load(), self.availability_topic_, "online", 0, 1, 1,
-                                true);
+        const auto client = self.client_.load();
+        if (client != nullptr) {
+            esp_mqtt_client_enqueue(client, self.availability_topic_, "online", 0, 1, 1, true);
+        }
         ESP_LOGI(tag, "MQTT connected");
     } else if (id == MQTT_EVENT_DISCONNECTED || id == MQTT_EVENT_ERROR) {
         self.mqtt_up_.store(false);
@@ -73,15 +113,16 @@ void MqttTelemetry::event(void* context, esp_event_base_t, std::int32_t id, void
 
 void MqttTelemetry::report(const domain::Telemetry& status) noexcept {
 #if CONFIG_ESPKIT_NETWORK_ENABLED
+    const std::lock_guard<std::mutex> lock(publish_mutex_);
     const auto client = client_.load();
-    if (!client || !mqtt_up_.load()) {
+    if (client == nullptr || !mqtt_up_.load()) {
         ++dropped_;
         return;
     }
     std::array<char, payload_capacity> payload{};
     const auto length = encode_telemetry(status, payload);
     // QoS 0 + store=false: no offline telemetry backlog or replay after reconnect.
-    if (!length || esp_mqtt_client_get_outbox_size(client) >= outbox_limit_bytes ||
+    if (length == 0 || esp_mqtt_client_get_outbox_size(client) >= outbox_limit_bytes ||
         esp_mqtt_client_enqueue(client, telemetry_topic_, payload.data(), static_cast<int>(length),
                                 0, 0, false) < 0) {
         ++dropped_;

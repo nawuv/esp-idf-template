@@ -140,7 +140,7 @@ class DeviceRuntime {
     networking::WifiStation wifi_{clock_};
     networking::MqttTelemetry mqtt_;
     networking::SntpTime network_time_;
-    networking::NetworkService network_{wifi_, mqtt_, network_time_};
+    networking::NetworkService network_{wifi_, mqtt_, network_time_, clock_};
     CombinedReporter reporter_{log_, network_, command_results_};
     domain::TimedOutput policy_{defaults::output_policy};
     app::SensorWorker sensor_worker_;

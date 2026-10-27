@@ -2,7 +2,8 @@
 
 namespace device {
 
-// One-shot startup. Dependencies have static device lifetime.
+// Builds the boot-lifetime runtime and starts its workers once.
+// Network adapters can stop and start again; this function does not.
 void start_device();
 
 } // namespace device
