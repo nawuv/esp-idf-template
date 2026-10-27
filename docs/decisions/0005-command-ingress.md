@@ -87,6 +87,10 @@ A command duration must be shorter than `max_run_ms`. The request is released
 before `TimedOutput` treats a still-running output as a fault. A clock jump
 across that limit still faults. Stop completion is recorded for the notice the
 control loop observes; an earlier stop in the same quiet period has already
-returned `accepted` and has advanced the generation. `submit` stays
-single-threaded: reassemble a remote payload on that worker. A full result FIFO
-rejects a new enable. The decoder does not subscribe. Hardware was not validated.
+returned `accepted` and has advanced the generation. That overwritten stop is
+not given a later completion record. [ADR 0008](0008-output-quiesce.md) states
+why, and why `accepted` is not a confirmed safe output. A stop the control loop
+does observe is `applied` only when that step's applied output is `off`.
+`submit` stays single-threaded: reassemble a remote payload on that worker. A
+full result FIFO rejects a new enable. The decoder does not subscribe. Hardware
+was not validated.
