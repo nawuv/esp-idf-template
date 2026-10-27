@@ -19,6 +19,8 @@ Wi-Fi and MQTT init failure, retry after the monotonic delay, and control
 continuing while the network is stopped. Resource-phase transitions are tested
 without ESP-IDF. The Unity application does not run those cases: SDK teardown
 needs a board, and the host tests already cover the portable contract.
+Boot-health tests hold, confirm, or refuse from a completed control step and the
+applied output. Both broker flags are compared and produce the same decision.
 Add domain-specific boundary tests when control rules grow.
 
 ## Target

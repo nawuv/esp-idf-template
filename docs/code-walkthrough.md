@@ -36,6 +36,12 @@ The state machine owns off/running/fault transitions. It checks measurement age
 and maximum continuous runtime using the injected monotonic time. It knows nothing
 about GPIO, Wi-Fi, MQTT, or FreeRTOS. Workers own the calls to external ports.
 
+`decide_boot_health` is a separate pure function in `domain/boot_health.hpp`. It
+confirms a pending boot only after control has completed a step and the applied
+output is off. It holds before that evidence exists and refuses a completed step
+whose output is on or unknown. The broker argument is ignored. The function does
+not download an image or call the OTA API.
+
 ## 5. Commands: domain/command.hpp and application/command_path.hpp
 
 A command is a small plain value: id, sequence, identity, type, source, deadline,

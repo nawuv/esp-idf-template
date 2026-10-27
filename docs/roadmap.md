@@ -46,6 +46,14 @@ quiescing, and local health confirmation/rollback. Do not require broker availab
 to mark a healthy device valid. The current partition table reserves two app slots;
 it does not implement updates. Budget image size against each slot.
 
+`decide_boot_health` is the local confirmation rule for that check. It returns
+`hold` until control has completed a step, `confirm` when that step observed
+`AppliedOutput::off`, and `refuse` when the step observed `on` or `unknown`. The
+broker flag is an argument and is ignored, so a reachable broker cannot confirm a
+boot and an unreachable broker cannot refuse one. The function does not download,
+parse, or activate an image, and it does not call the OTA API. Output quiescing
+before restart, image verification, and rollback remain separate.
+
 Add release manifests, device identity, diagnostics, staged rollout, certificate
 rotation, and backend fleet inventory. A firmware template alone is not a fleet
 management backend. Keep credentials out of CI artifacts.

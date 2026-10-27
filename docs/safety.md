@@ -37,5 +37,7 @@ Select these rules explicitly for each product. The starter defaults to OFF.
 OTA must quiesce outputs and confirm this before restarting. Network `stop` does
 not do that. The composition root has to request safe OFF through the command
 path and observe the applied status first; a failed OFF stays unknown. See
-[ADR 0007](decisions/0007-service-lifecycle.md). The current partition layout only
-reserves storage; OTA download and health confirmation are not present.
+[ADR 0007](decisions/0007-service-lifecycle.md). The partition layout only reserves
+storage. `decide_boot_health` holds, confirms, or refuses from a completed control
+step and an applied output of off, and it ignores broker reachability. Download,
+image checks, and marking a slot valid are not present.
