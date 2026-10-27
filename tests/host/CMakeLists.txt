@@ -15,6 +15,7 @@ foreach(component domain application drivers configuration networking)
 endforeach()
 add_executable(policy_tests
     test_timed_output.cpp
+    test_boot_health.cpp
     test_workers.cpp
     test_sht3x.cpp
     test_networking.cpp

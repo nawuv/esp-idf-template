@@ -11,7 +11,7 @@ mirror their owning namespace. Check for SDK component collisions when adding na
 
 | Component | Namespace | Responsibility |
 | --- | --- | --- |
-| `domain` | `domain` | Measurements, status, timed-output policy, and command checks |
+| `domain` | `domain` | Measurements, status, timed-output policy, command checks, and the boot-health decision |
 | `application` | `application` | Portable ports, command ingress, output quiesce, and single-step workers |
 | `drivers` | `drivers` | Synthetic/SHT3x inputs and simulated output |
 | `platform` | `platform` | ESP-IDF I2C, monotonic clock, FreeRTOS queues/tasks, log sink |

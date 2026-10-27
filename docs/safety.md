@@ -42,6 +42,8 @@ unsuccessful, and so is reaching the deadline without that newer `off` sample.
 A failed OFF stays unknown. The helper does not call network `stop` or
 `esp_ota_*`. An overwritten stop in the one-slot mailbox stays `accepted` and
 has no completion record; `accepted` is not a safe output. See
-[ADR 0008](decisions/0008-output-quiesce.md). The current partition layout only
-reserves storage; OTA download and health confirmation are not present. The
-helper is not called on boot.
+[ADR 0008](decisions/0008-output-quiesce.md). The helper is not called on boot.
+The partition layout only reserves storage. `decide_boot_health` holds,
+confirms, or refuses from a completed control step and an applied output of
+off, and it ignores broker reachability. Download, image checks, and marking a
+slot valid are not present.
