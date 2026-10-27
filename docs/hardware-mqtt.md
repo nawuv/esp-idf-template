@@ -13,8 +13,10 @@ Wi-Fi/broker execution still require the hardware acceptance checks below.
 - Runtime credentials loaded from a versioned `espkit` NVS namespace.
 
 The default firmware still uses synthetic input, simulated output, and no network.
-No GPIO actuator, MQTT command execution, irrigation automation, or OTA download is
-implemented. The SHT3x measures air temperature/humidity, not soil moisture.
+No GPIO actuator, MQTT command subscription, irrigation automation, or OTA download
+is implemented. A portable command ingress rejects remote commands by default and
+does not open a broker connection. The SHT3x measures air temperature/humidity,
+not soil moisture.
 
 ## Build a hardware-enabled configuration
 

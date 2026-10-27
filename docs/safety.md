@@ -7,6 +7,14 @@ sensor values, invalid durations, a regressing clock, and maximum runtime expiry
 Faults latch until an explicit reset while output is off. Physical value ranges
 and units must be validated by a product-specific policy.
 
+Command admission is separate from that policy and cannot replace it. The ingress
+checks the deadline, requested duration, identity, source, duplicate id, and
+sequence, and it rejects a full queue instead of blocking. `stop` does not wait
+behind queued enables. A retransmission of an accepted id cannot restart the
+runtime. There is no command that resets a fault. Remote sources stay rejected
+unless `ESPKIT_REMOTE_COMMANDS` is enabled. That option does not subscribe to
+MQTT or enable a physical output. See [ADR 0005](decisions/0005-command-ingress.md).
+
 Before enabling real hardware:
 
 1. Set a safe output latch before enabling its GPIO direction. Verify boot/reset

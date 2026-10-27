@@ -22,3 +22,14 @@ config ESPKIT_SHT3X_ADDRESS
     default 0x44
     depends on ESPKIT_SENSOR_SHT3X
 endmenu
+
+menu "ESPKit commands"
+config ESPKIT_REMOTE_COMMANDS
+    bool "Allow remote-sourced commands at the local ingress"
+    default n
+    help
+        Disabled by default. This permits CommandSource::remote to pass
+        local admission. It does not subscribe to MQTT, trust the network,
+        or drive a physical output. Accepted commands still pass through
+        the local TimedOutput policy.
+endmenu

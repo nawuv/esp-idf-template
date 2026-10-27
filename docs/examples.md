@@ -9,7 +9,8 @@ Build each with `idf.py -C examples/<name> set-target esp32s3` followed by
 
 `examples/simulation` starts the common device composition: separate sensor, control,
 and reporting tasks, with synthetic input and output permanently requested OFF.
-Expected fields: `requested=0 applied=1 fault=0`.
+The command ingress is constructed and left idle. Expected fields:
+`requested=0 applied=1 fault=0`.
 
 ## Sensor node
 

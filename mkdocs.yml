@@ -49,3 +49,4 @@ nav:
           - Injected Workers: decisions/0002-injected-workers-and-composition.md
           - Layered Components: decisions/0003-layered-components.md
           - Portable Component API: decisions/0004-portable-component-api.md
+          - Command Ingress: decisions/0005-command-ingress.md

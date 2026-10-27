@@ -35,15 +35,16 @@ Status: **pre-alpha**, with hardware acceptance testing still pending.
 
 - ESP32-S3 builds with the pinned ESP-IDF 5.4.2 baseline.
 - Constructor-injected workers and explicit output states.
-- Bounded latest-value queues and independent task scheduling.
+- Bounded latest-value queues, a rejecting command FIFO, and independent task scheduling.
 - Host tests, a Unity test application, and three standalone example projects.
 - Optional [SHT3x, Wi-Fi, and MQTT](hardware-mqtt.md) with runtime NVS credentials.
 - English documentation, formatting checks, and configurable release automation.
 
 ## What comes next
 
-Physical actuator drivers, command handling, secure provisioning, configuration
-migrations, and OTA execution remain [roadmap items](roadmap.md). OTA partitions are reserved in the
+Physical actuator drivers, MQTT command subscription, secure provisioning, configuration
+migrations, and OTA execution remain [roadmap items](roadmap.md). Local command admission
+is implemented and defaults to an idle, remote-rejected ingress. OTA partitions are reserved in the
 root firmware, but an updater is not implemented. Cluster coordination and robot
 motion algorithms are not included.
 

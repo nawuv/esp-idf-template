@@ -10,7 +10,7 @@
 
 namespace platform {
 
-// Latest-value transport only. Commands require a bounded FIFO with rejection semantics.
+// Latest-value transport only. Command FIFOs are FreeRtosFifo and reject when full.
 template <typename T>
 class FreeRtosSnapshot final : public application::SnapshotReader<T>,
                                public application::SnapshotWriter<T> {

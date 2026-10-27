@@ -11,8 +11,8 @@ mirror their owning namespace. Check for SDK component collisions when adding na
 
 | Component | Namespace | Responsibility |
 | --- | --- | --- |
-| `domain` | `domain` | Measurements, status, and timed-output safety policy |
-| `application` | `application` | Portable ports and single-step workers |
+| `domain` | `domain` | Measurements, status, timed-output policy, and command checks |
+| `application` | `application` | Portable ports, command ingress, and single-step workers |
 | `drivers` | `drivers` | Synthetic/SHT3x inputs and simulated output |
 | `platform` | `platform` | ESP-IDF I2C, monotonic clock, FreeRTOS queues/tasks, log sink |
 | `configuration` | `configuration` | Network settings validation and NVS loading |
@@ -57,6 +57,8 @@ This is a lightweight boundary check, not a general C++ dependency analyzer.
 | Strategy | Sensor/output ports allow synthetic and physical implementations |
 | State machine | `domain::TimedOutput` explicitly tracks off/running/fault |
 | Producer-consumer | Bounded latest-value queues connect workers |
+| Bounded FIFO with rejection | Command ingress returns a status instead of overwriting or blocking |
+| Separate stop mailbox | A full command FIFO cannot delay `CommandType::stop` |
 
 No DI container, service locator, Singleton, generic event bus, or factory hierarchy
 is required. A replaceable control-policy interface should wait until a second
@@ -73,8 +75,11 @@ This constraint is explicit; these adapters are not general-purpose restartable 
 
 Sensor (500 ms), control (100 ms), and reporter (2000 ms) workers run independently.
 Two length-one FreeRTOS queues carry latest-value snapshots; reads do not consume
-them. Overwrite is intentional. Commands need a separate bounded FIFO and rejection
-semantics. Startup seeds a reading and applies safe OFF before tasks start.
+them. Overwrite is intentional. Commands use a separate bounded FIFO that rejects
+when full, plus a one-slot stop notice. `CommandIngress::submit` is single-threaded;
+the FIFO and stop mailbox are the cross-task boundary. The default firmware does
+not call `submit`, so the output request stays off. Startup seeds a reading and
+applies safe OFF before tasks start.
 
 Before any tasks start, the composition root loads validated settings through
 `configuration::NvsConfigStore` and passes a copy to `NetworkService::configure()`.
@@ -100,12 +105,14 @@ OFF is reported as unknown, not confirmed OFF. Applied status is software
 acknowledgement, not physical feedback. Cooldowns, duty limits, independent
 interlocks, and hardware watchdog behavior are product responsibilities.
 
-Physical outputs and remote commands remain disabled. Log status identifies sensor
-origin separately from the simulated output mode. See [Safety](safety.md).
+Physical outputs remain disabled. Remote command sources stay rejected unless
+`ESPKIT_REMOTE_COMMANDS` is enabled, and that option does not subscribe to MQTT.
+Log status identifies sensor origin separately from the simulated output mode.
+See [Safety](safety.md) and [ADR 0005](decisions/0005-command-ingress.md).
 
 ## Constants and settings
 
-- `main/device_config.hpp`: sampling periods, task stacks/priorities, and selected policy.
+- `main/device_config.hpp`: sampling periods, task stacks/priorities, command queue depths, and selected policy.
 - `main/boards/esp32s3/board_config.hpp`: GPIO and bus settings, exposed by `main/Kconfig.projbuild`.
 - `domain/policy_defaults.hpp`: reusable safe-policy defaults, overridable through `OutputPolicy`.
 - `platform/constants.hpp`: queue capacity and time conversions, not deployment task budgets.

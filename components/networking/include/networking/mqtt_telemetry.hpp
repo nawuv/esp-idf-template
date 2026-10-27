@@ -10,7 +10,8 @@
 namespace networking {
 
 // Boot-lifetime MQTT adapter; config passed to start() must outlive the client.
-// No remote commands and no offline telemetry backlog.
+// No command subscription and no offline telemetry backlog.
+// A future adapter calls application::CommandIngress::submit and does not write outputs.
 class MqttTelemetry final : public MqttConnection {
     public:
     MqttTelemetry() = default;

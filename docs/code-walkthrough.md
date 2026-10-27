@@ -17,7 +17,8 @@ part of dependency injection, not a violation of it.
 
 The selected sensor is synthetic by default. The SHT3x build option selects the
 physical driver and initializes its injected I2C adapter. Output is always simulated
-and the root device always requests OFF. Settings live in `device_config.hpp` and
+and the root device always requests OFF. The command ingress is wired and idle.
+Settings live in `device_config.hpp` and
 `boards/esp32s3/board_config.hpp`.
 
 ## 3. Single-step work: application/workers.hpp and workers.cpp
@@ -35,13 +36,46 @@ The state machine owns off/running/fault transitions. It checks measurement age
 and maximum continuous runtime using the injected monotonic time. It knows nothing
 about GPIO, Wi-Fi, MQTT, or FreeRTOS. Workers own the calls to external ports.
 
-## 5. Scheduling: platform/periodic_task.hpp, snapshot.hpp, and runtime.cpp
+## 5. Commands: domain/command.hpp and application/command_path.hpp
+
+A command is a small plain value: id, sequence, identity, type, source, deadline,
+and, for an enable, a requested duration. `validate_command` rejects a command
+that is malformed, too long, already expired, or remote while remote admission
+is off. `CommandIngress::submit` then rejects duplicates and stale sequences.
+A full FIFO returns `rejected_full`. It does not block and it does not drop some
+older command to make room.
+
+`CommandRequests` is the `RequestSource` the control worker already polls. After
+`TimedOutput` decides, the worker calls `note_outcome`. That is the
+acknowledgement that the command was applied or refused. The command code never
+calls `OutputSink` itself.
+
+`stop` is the exception to FIFO order. It publishes a one-slot notice, bumps a
+generation counter, and the next control step throws away queued commands that
+were admitted before that generation. A later, new command can still be accepted.
+Retransmitting an id that was already accepted cannot start the output again.
+
+The root firmware constructs this path and does not call `submit`. MQTT does not
+subscribe. A future network adapter should parse a bounded payload, convert a
+trusted deadline into monotonic time, and call `submit` from one task.
+
+### Add a command type later
+
+1. Add a `CommandType` enumerator.
+2. Update `validate_command`. Host builds treat a missing switch case as an error.
+3. Decide whether it is queued or immediate, like `stop`. Handle it in
+   `CommandRequests` so an unknown queued value is not silently popped.
+4. Keep the output behind `TimedOutput`. Do not reset a fault from a remote command.
+5. Add host tests for acceptance, rejection, and the safety interaction.
+
+## 6. Scheduling: platform/periodic_task.hpp, snapshot.hpp, command_queue.hpp, and runtime.cpp
 
 `PeriodicTask` repeatedly calls a worker's `step()` and yields until its next period.
 Sensor reads can wait without stopping the separately scheduled local controller.
-`FreeRtosSnapshot` implements the mailbox using a bounded queue.
+`FreeRtosSnapshot` implements the mailbox using a bounded queue. `FreeRtosFifo`
+is the command queue: a zero-wait send fails when the queue is full.
 
-## 6. Optional networking
+## 7. Optional networking
 
 The composition root loads NVS settings with `NvsConfigStore` before starting tasks.
 It injects `WifiStation`, `MqttTelemetry`, and `SntpTime` through portable connection
@@ -62,6 +96,8 @@ and physical safety still require the [hardware acceptance checks](hardware-mqtt
 | Change wiring | `main/boards/esp32s3/board_config.hpp` and Kconfig |
 | Add a portable driver | `components/drivers/` |
 | Change local safety rules | `components/domain/` and host tests |
+| Change command admission or add a command type | `domain/command.hpp`, `application/command_path.hpp`, and host tests |
+| Subscribe to remote commands later | `components/networking/`, calling `CommandIngress::submit` |
 | Change MQTT encoding/connection | `components/networking/` |
 
 Read [Architecture](architecture.md) for dependency rules before adding cross-component includes.

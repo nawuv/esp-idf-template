@@ -6,9 +6,10 @@ Status: architectural direction, not an implemented distributed runtime.
 
 A node owns its control policy and actuator. Sensor, request, output, clock,
 transport, and reporting implementations can evolve independently. Local work
-can execute without a server. `RequestSource` is a narrow admission boundary:
-future implementations must validate remote commands before exposing a request.
-It is not itself a protocol or proof of distributed safety.
+can execute without a server. `CommandIngress` validates a command before
+`RequestSource` exposes a boolean request to `TimedOutput`. The ingress is not
+a protocol or proof of distributed safety. MQTT command subscription is not
+implemented; a future adapter calls `submit` and does not write the output.
 
 For richer robots, introduce product-specific typed snapshots and actions instead
 of encoding all sensors into one float or all motor commands into one boolean.

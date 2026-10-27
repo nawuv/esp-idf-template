@@ -22,11 +22,18 @@ class OutputSink {
     virtual domain::OutputError set_enabled(bool enabled) noexcept = 0;
 };
 
-// Implementations must be non-blocking and must not bypass local safety rules.
+// Polled by the control worker. Must be non-blocking and must not bypass local safety rules.
+// note_outcome runs after TimedOutput and the output adapter, once per control step.
 class RequestSource {
     public:
     virtual ~RequestSource() = default;
     virtual bool enable_requested(domain::Milliseconds now) noexcept = 0;
+
+    virtual void note_outcome(bool enabled, bool fault, domain::Milliseconds now) noexcept {
+        (void)enabled;
+        (void)fault;
+        (void)now;
+    }
 };
 
 template <typename T> class SnapshotReader {
