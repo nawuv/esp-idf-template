@@ -14,7 +14,7 @@ Implemented:
 - Separate FreeRTOS sensor, control, and reporting tasks with bounded queues.
 - Portable command ingress with explicit rejection. Remote admission is off by default.
 - Safe default firmware: synthetic input, simulated output, and networking disabled.
-- Optional SHT3x-DIS I2C driver and Wi-Fi/MQTT status reporting with runtime NVS settings.
+- Optional SHT3x-DIS I2C driver and Wi-Fi/MQTT status reporting with versioned NVS settings.
 - ESP32-S3 build workflow and host test workflow.
 - Unity target-test application (execution requires hardware).
 - A 4 MiB flash layout reserving two OTA application slots.
@@ -23,7 +23,7 @@ Implemented:
 - Opt-in GitHub Pages deployment and semantic-release on validated main pushes.
 
 Planned: physical actuator drivers, MQTT command subscription, secure provisioning,
-configuration migration, OTA execution, hardware acceptance tests, and smart-farm automation.
+OTA execution, hardware acceptance tests, and smart-farm automation.
 These features are not implemented by placeholder folders.
 
 **Do not connect this starter firmware to a live pump.** Hardware output control

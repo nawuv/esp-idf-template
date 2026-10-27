@@ -26,9 +26,16 @@ versions compatible with the chosen SDK baseline.
 
 ## Configuration and provisioning
 
-Add typed configuration, range validation, schema version, NVS persistence, and
-provisioning through supported ESP-IDF mechanisms. Design migrations for both
-upgrade and rollback. Never commit per-device credentials.
+Typed network and identity settings, range validation, NVS schema 1, and
+in-memory upgrade/rollback migration are implemented
+([ADR 0006](decisions/0006-versioned-settings.md)). Load never rewrites NVS.
+Unversioned records upgrade when the schema 1 fields validate. A newer schema
+is used only through those same fields. Corrupt, partial, and out-of-range
+records are rejected and left stored.
+
+Still to do: encrypted NVS, flash encryption, and other secure factory
+provisioning, plus remote configuration updates. Never commit per-device
+credentials.
 
 ## OTA and fleet operation
 

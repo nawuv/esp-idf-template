@@ -78,8 +78,12 @@ is the command queue: a zero-wait send fails when the queue is full.
 ## 7. Optional networking
 
 The composition root loads NVS settings with `NvsConfigStore` before starting tasks.
-It injects `WifiStation`, `MqttTelemetry`, and `SntpTime` through portable connection
-ports into `NetworkService`. The network task connects Wi-Fi, waits for TLS time
+The store reads the `espkit` namespace and calls portable `migrate_settings`. A
+schema 1 record is used as stored. A record with no schema key is upgraded in
+memory when its fields validate. A newer schema is used only through those schema
+1 fields. The load does not write flash. Invalid records leave networking off.
+The composition root injects `WifiStation`, `MqttTelemetry`, and `SntpTime` through
+portable connection ports into `NetworkService`. The network task connects Wi-Fi, waits for TLS time
 readiness, and starts MQTT. The reporter logs status and attempts bounded telemetry enqueue.
 Offline reports are dropped; reconnection does not replay old measurements.
 
@@ -99,5 +103,6 @@ and physical safety still require the [hardware acceptance checks](hardware-mqtt
 | Change command admission or add a command type | `domain/command.hpp`, `application/command_path.hpp`, and host tests |
 | Subscribe to remote commands later | `components/networking/`, calling `CommandIngress::submit` |
 | Change MQTT encoding/connection | `components/networking/` |
+| Add a runtime network or identity setting | `configuration/network_config.hpp`, `settings_migration.hpp`, `NvsConfigStore`, and `tools/provision_device.py` |
 
 Read [Architecture](architecture.md) for dependency rules before adding cross-component includes.

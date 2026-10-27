@@ -10,6 +10,10 @@ import subprocess
 from pathlib import Path
 from urllib.parse import urlsplit
 
+# On-disk settings schema 1 in the espkit namespace. Firmware migrates a missing
+# schema key in memory and does not rewrite NVS. Keep these keys and this version
+# so already-provisioned devices, and firmware that requires schema == 1, still load.
+SCHEMA_VERSION = 1
 LIMITS = {'wifi_ssid': 32, 'wifi_pass': 63, 'mqtt_uri': 191, 'mqtt_user': 63,
           'mqtt_pass': 127, 'device_id': 63, 'site_id': 31}
 
@@ -46,7 +50,7 @@ def write_csv(config: dict, destination: Path) -> None:
         writer = csv.writer(stream)
         writer.writerow(['key', 'type', 'encoding', 'value'])
         writer.writerow(['espkit', 'namespace', '', ''])
-        writer.writerow(['schema', 'data', 'u8', 1])
+        writer.writerow(['schema', 'data', 'u8', SCHEMA_VERSION])
         for name in LIMITS:
             writer.writerow([name, 'data', 'string', config[name]])
 

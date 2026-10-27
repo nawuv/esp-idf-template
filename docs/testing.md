@@ -11,6 +11,9 @@ fault propagation, failed-stop unknown state, and reporting without ESP-IDF.
 Command tests cover a full queue, invalid and expired commands, duplicates,
 stale sequences, remote rejection, stop while the FIFO is full, and commands
 that cannot override a `TimedOutput` fault.
+Settings tests cover unversioned upgrade, schema 1, a newer schema, corrupt and
+partial records, out-of-range values, and empty optional credentials. They call
+`migrate_settings` directly and do not open NVS.
 Add domain-specific boundary tests when control rules grow.
 
 ## Target

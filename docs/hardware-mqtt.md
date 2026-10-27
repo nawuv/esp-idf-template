@@ -75,7 +75,21 @@ idf.py -B build-hardware -p /dev/ttyACM0 flash monitor
 
 Do not use this offset on a different partition layout. Existing NVS settings are
 replaced, not merged. The application never automatically erases NVS to recover
-from an initialization failure. Configuration schema is 1; migrations are not implemented.
+from an initialization failure, and loading settings does not rewrite the namespace.
+
+The durable layout is schema 1 in the `espkit` namespace: `schema` as a `u8`,
+required strings `wifi_ssid`, `wifi_pass`, `mqtt_uri`, `device_id`, and `site_id`,
+plus optional `mqtt_user` and `mqtt_pass`. A record with no `schema` key is the
+unversioned layout. This firmware keeps it when those schema 1 fields validate,
+and applies that upgrade only in memory. A schema newer than this firmware is
+used only when the same fields still validate. Unknown keys are left untouched.
+Corrupt, partial, and out-of-range records are ignored, so networking stays off
+and local control continues. Values are not shortened to force them in range.
+See [ADR 0006](decisions/0006-versioned-settings.md). On rejection the firmware
+logs `rejected NVS settings problem=<n> schema=<version>` (`1` corrupt, `2`
+partial, `3` out of range, `4` incompatible). An in-memory upgrade or a newer
+schema logs `loaded NVS settings outcome=<n> schema=<version>` (`1` migrated,
+`2` compatible with a newer schema). The log does not include stored values.
 
 ## Network behavior
 
