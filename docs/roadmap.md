@@ -5,7 +5,9 @@
 Portable types, injected workers, output state machine/error handling, component-owned
 constants, a dedicated composition root, simulation adapters, host tests, firmware
 build CI, English MkDocs documentation, standalone examples, opt-in Pages/release
-automation, packaged firmware provenance, and reserved OTA partitions.
+automation, packaged firmware provenance, reserved OTA partitions, and a bounded
+command ingress with local validation. Remote admission defaults off. MQTT does
+not subscribe to commands.
 
 ## First hardware slice (code available; hardware validation pending)
 
@@ -16,11 +18,11 @@ Keep smart-farm rules out of reusable networking and hardware components.
 
 ## Networking
 
-Wi-Fi and MQTT telemetry are implemented as opt-in services. Next add a bounded
-command queue, local command
-validation, TLS, telemetry, and integration tests. Do not add dependencies until
-used; then commit the managed dependency lockfile. Pin versions compatible with
-the chosen SDK baseline.
+Wi-Fi and MQTT telemetry are implemented as opt-in services. Local command
+validation and the bounded command queue are in the portable ingress. Next add
+an MQTT subscription that calls that ingress, TLS, and integration tests. Do not
+add dependencies until used; then commit the managed dependency lockfile. Pin
+versions compatible with the chosen SDK baseline.
 
 ## Configuration and provisioning
 

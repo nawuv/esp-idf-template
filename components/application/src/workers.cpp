@@ -26,6 +26,8 @@ void ControlWorker::step() noexcept {
             error = stop_error;
         }
     }
+    const bool output_on = enabled && error == domain::OutputError::none;
+    requests_.note_outcome(output_on, policy_.fault(), now);
     telemetry_.publish({now, requested, applied, policy_.fault(), error, reading});
 }
 

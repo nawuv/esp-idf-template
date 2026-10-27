@@ -1,8 +1,10 @@
 # MQTT contract proposal
 
 Status: telemetry and availability publishing are implemented by the optional
-Wi-Fi/MQTT adapter. Command execution and command-result topics remain design only.
-See [Hardware and MQTT](hardware-mqtt.md) for configuration and validation limits.
+Wi-Fi/MQTT adapter. The portable command ingress is implemented and does not
+subscribe to the command topics below. Command execution on MQTT remains design
+only. See [Hardware and MQTT](hardware-mqtt.md) and
+[ADR 0005](decisions/0005-command-ingress.md).
 
 ## Topics
 
@@ -18,6 +20,38 @@ Use per-device credentials and ACLs, TLS server verification, bounded reconnect
 backoff with jitter, and a last will for availability. Broker-reported presence
 is not a safety input. Telemetry may be lossy; safety faults need a separate
 observable record. Define broker limits and offline storage limits explicitly.
+
+## Portable ingress seam
+
+`application::CommandIngress::submit` is the adapter boundary. The default
+firmware constructs it and never calls it. `ESPKIT_REMOTE_COMMANDS` defaults to
+off; `CommandSource::remote` is then `rejected_unauthorized`. Turning the option
+on does not open a socket or subscribe to `commands`.
+
+A future MQTT adapter should:
+
+- reassemble a bounded payload before parsing
+- reject the command when trusted time is unavailable
+- map the JSON fields below onto `domain::Command` using the device monotonic clock
+- call `submit` from one task, not from code that writes the output
+- publish `command-results` from the result FIFO when the broker is reachable,
+  without retaining one-shot actuator commands
+
+`command_id` maps to `Command::id` (the portable id is numeric; the adapter owns
+any string encoding). `type` is `set_output` or `stop`. `enabled` and
+`max_duration_ms` apply to `set_output`. An enable is `rejected_invalid` unless
+`max_duration_ms` is strictly below the device `max_run_ms`; the ingress does not
+clamp it. The sample payload uses 5000 ms, which the default policy rejects.
+`expires_at` must already be a monotonic deadline no further away than
+`command_defaults::max_ttl_ms`. Identity is a non-zero `uint32_t` chosen by the
+adapter after authentication. Sequence is a per-source counter that must increase
+for each new accepted command. Duplicate memory and sequence cursors reset on reboot.
+
+Admission statuses are `accepted`, `rejected_invalid`, `rejected_expired`,
+`rejected_duplicate`, `rejected_stale_sequence`, `rejected_unauthorized`, and
+`rejected_full`. After the control loop runs, a queued command is `applied`,
+`not_applied`, `expired_before_apply`, `dropped_by_stop`, or `superseded`.
+`accepted` does not mean the output turned on. `TimedOutput` can still refuse.
 
 ## Commands
 
