@@ -56,6 +56,7 @@ This is a lightweight boundary check, not a general C++ dependency analyzer.
 | Adapter | ESP-IDF I2C/clock and FreeRTOS implement portable application ports |
 | Strategy | Sensor/output ports allow synthetic and physical implementations |
 | State machine | `domain::TimedOutput` explicitly tracks off/running/fault |
+| Service lifecycle | Network phases and `NetworkState`; stop releases resources in reverse order |
 | Producer-consumer | Bounded latest-value queues connect workers |
 | Bounded FIFO with rejection | Command ingress returns a status instead of overwriting or blocking |
 | Separate stop mailbox | A full command FIFO cannot delay `CommandType::stop` |
@@ -70,9 +71,11 @@ one dynamically allocated object per state.
 
 `app_main()` calls `device::start_device()`. A function-local static `DeviceRuntime`
 constructs after SDK startup. Members are declared before objects borrowing them.
-The runtime is boot-lifetime and startup is one-shot. Individual service shutdown,
-restart, and resource recovery after partial SDK initialization are not supported.
-This constraint is explicit; these adapters are not general-purpose restartable services.
+The runtime object and the sensor, control, and reporter tasks are boot-lifetime.
+`start_device()` does not stop them. The network stack is different: it has an
+explicit lifecycle so a failed or partial SDK initialization can be released and
+retried, and so Wi-Fi can be stopped and started again, without rebooting and
+without stopping local control. See [ADR 0007](decisions/0007-service-lifecycle.md).
 
 Sensor (500 ms), control (100 ms), and reporter (2000 ms) workers run independently.
 Two length-one FreeRTOS queues carry latest-value snapshots; reads do not consume
@@ -82,20 +85,44 @@ the FIFO and stop mailbox are the cross-task boundary. The default firmware does
 not call `submit`, so the output request stays off. Startup seeds a reading and
 applies safe OFF before tasks start.
 
-Before any tasks start, the composition root loads validated settings through
+`DeviceRuntime` owns `WifiStation`, `SntpTime`, `MqttTelemetry`, and
+`NetworkService` for the boot. `stop` does not destroy those objects. Before any
+tasks start, the composition root loads validated settings through
 `configuration::NvsConfigStore` and passes a copy to `NetworkService::configure()`.
-Only the network task calls `NetworkService::step()`. It steps `WifiStation`, waits
-for injected `NetworkTime` readiness, then starts `MqttTelemetry`. The service
-uses portable connection ports; `SntpTime` owns the SDK time-sync calls.
-The reporter calls `NetworkService::report()`, which gates transmission on Wi-Fi
-state and delegates to MQTT. Wi-Fi and MQTT callbacks update atomic adapter state;
-retry timing and initialization state belong to the network worker. MQTT's callback
-also enqueues retained online availability. MQTT config references remain valid
-because `NetworkService` owns its settings for the boot lifetime.
+That call is ignored after the service leaves `disabled`; a later restart reuses
+the owned copy. After startup, only the network task calls `start`, `stop`,
+`step`, and `state`.
 
-Control never calls networking. Telemetry uses bounded nonblocking enqueue with
-QoS 0 and no offline backlog. Sensor bus waits remain on the sensor task. Task
-budgets require hardware measurement; compilation is not timing validation.
+`step` starts Wi-Fi, then SNTP when the URI is `mqtts://`, waits for the link and
+for injected `NetworkTime` readiness, then starts MQTT. `stop` releases in the
+opposite order: MQTT, SNTP, then Wi-Fi. A failed `start` releases the resources
+that stage owns. Wi-Fi bring-up failure releases the whole stack and moves to
+`failed`, which `step` retries after `network_init_retry_ms`. MQTT bring-up
+failure releases only the client and retries it, leaving the station and SNTP up.
+`stopped` does not retry until `start`. Losing the link after a successful start
+is not `failed`; the station and the MQTT client reconnect on their own.
+
+The TCP/IP stack and the default event loop stay initialized across that restart.
+ESP-IDF does not support `esp_netif_deinit`, and SNTP and MQTT share the event
+loop. The station netif, Wi-Fi driver, handlers, MQTT client, and SNTP session are
+the resources `stop` actually releases. `esp_netif_create_default_wifi_sta` aborts
+on failure, so the adapter uses the fallible netif calls instead; an abort would
+stop the control task as well.
+
+The reporter calls `NetworkService::report()`, which gates transmission on the
+Wi-Fi link and delegates to MQTT. That call may run while the network task is
+stopping. The MQTT adapter serializes use of the client pointer; Wi-Fi and MQTT
+callbacks only update atomics. MQTT's callback also enqueues retained online
+availability. Config strings remain valid because `NetworkService` owns its
+settings for the boot lifetime.
+
+`NetworkService::stop` does not read the sensor and does not change the output.
+A later operation that needs a quiet actuator, including OTA, has to request safe
+OFF through the command path and observe the applied status first. A failed OFF
+stays unknown. That quiesce sequence is not implemented here. Control never calls
+networking. Telemetry uses bounded nonblocking enqueue with QoS 0 and no offline
+backlog. Sensor bus waits remain on the sensor task. Task budgets require hardware
+measurement; compilation is not timing validation.
 
 ## Safety and status
 

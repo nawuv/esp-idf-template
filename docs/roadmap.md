@@ -18,11 +18,13 @@ Keep smart-farm rules out of reusable networking and hardware components.
 
 ## Networking
 
-Wi-Fi and MQTT telemetry are implemented as opt-in services. Local command
-validation and the bounded command queue are in the portable ingress. Next add
-an MQTT subscription that calls that ingress, TLS, and integration tests. Do not
-add dependencies until used; then commit the managed dependency lockfile. Pin
-versions compatible with the chosen SDK baseline.
+Wi-Fi and MQTT telemetry are implemented as opt-in services. A failed or partial
+start can be released and retried, and the stack can be stopped, without
+rebooting local control. Local command validation and the bounded command queue
+are in the portable ingress. Next add an MQTT subscription that calls that
+ingress, TLS, and integration tests. Do not add dependencies until used; then
+commit the managed dependency lockfile. Pin versions compatible with the chosen
+SDK baseline.
 
 ## Configuration and provisioning
 

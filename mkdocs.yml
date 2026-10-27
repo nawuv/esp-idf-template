@@ -51,3 +51,4 @@ nav:
           - Portable Component API: decisions/0004-portable-component-api.md
           - Command Ingress: decisions/0005-command-ingress.md
           - Versioned Settings: decisions/0006-versioned-settings.md
+          - Service Lifecycle: decisions/0007-service-lifecycle.md
