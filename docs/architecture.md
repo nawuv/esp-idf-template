@@ -15,7 +15,7 @@ mirror their owning namespace. Check for SDK component collisions when adding na
 | `application` | `application` | Portable ports, command ingress, and single-step workers |
 | `drivers` | `drivers` | Synthetic/SHT3x inputs and simulated output |
 | `platform` | `platform` | ESP-IDF I2C, monotonic clock, FreeRTOS queues/tasks, log sink |
-| `configuration` | `configuration` | Network settings validation and NVS loading |
+| `configuration` | `configuration` | Network settings validation, schema migration, and NVS loading |
 | `networking` | `networking` | Wi-Fi lifecycle, MQTT telemetry, and connection coordination |
 | `main/` | `device` | Product selection, board settings, task budgets, and object wiring |
 
@@ -59,6 +59,7 @@ This is a lightweight boundary check, not a general C++ dependency analyzer.
 | Producer-consumer | Bounded latest-value queues connect workers |
 | Bounded FIFO with rejection | Command ingress returns a status instead of overwriting or blocking |
 | Separate stop mailbox | A full command FIFO cannot delay `CommandType::stop` |
+| In-memory schema migration | `migrate_settings` upgrades stored network fields without rewriting NVS |
 
 No DI container, service locator, Singleton, generic event bus, or factory hierarchy
 is required. A replaceable control-policy interface should wait until a second
@@ -117,7 +118,7 @@ See [Safety](safety.md) and [ADR 0005](decisions/0005-command-ingress.md).
 - `domain/policy_defaults.hpp`: reusable safe-policy defaults, overridable through `OutputPolicy`.
 - `platform/constants.hpp`: queue capacity and time conversions, not deployment task budgets.
 - Driver `.cpp` files: fixed protocol commands, CRC values, and timing requirements.
-- Runtime NVS: validated network credentials and identity; see [Hardware and MQTT](hardware-mqtt.md).
+- Runtime NVS: validated network credentials and identity, schema 1, with in-memory migration; see [Hardware and MQTT](hardware-mqtt.md) and [ADR 0006](decisions/0006-versioned-settings.md).
 
 Use units in names. Configuration objects express values that vary by device;
 constants express fixed protocol/library rules. Do not collect every literal into

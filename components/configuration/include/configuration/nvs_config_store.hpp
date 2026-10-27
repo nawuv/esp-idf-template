@@ -6,7 +6,8 @@ namespace configuration {
 
 class NvsConfigStore {
     public:
-    // Preserves the existing NVS namespace and schema; never erases storage.
+    // Reads the espkit namespace. Never erases or rewrites NVS.
+    // Applies migrate_settings in memory. A false return leaves `config` unchanged.
     bool load(NetworkConfig& config, bool allow_plaintext = false) const noexcept;
 };
 

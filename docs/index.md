@@ -37,13 +37,14 @@ Status: **pre-alpha**, with hardware acceptance testing still pending.
 - Constructor-injected workers and explicit output states.
 - Bounded latest-value queues, a rejecting command FIFO, and independent task scheduling.
 - Host tests, a Unity test application, and three standalone example projects.
-- Optional [SHT3x, Wi-Fi, and MQTT](hardware-mqtt.md) with runtime NVS credentials.
+- Optional [SHT3x, Wi-Fi, and MQTT](hardware-mqtt.md) with versioned NVS credentials.
 - English documentation, formatting checks, and configurable release automation.
 
 ## What comes next
 
-Physical actuator drivers, MQTT command subscription, secure provisioning, configuration
-migrations, and OTA execution remain [roadmap items](roadmap.md). Local command admission
+Physical actuator drivers, MQTT command subscription, secure provisioning, and OTA
+execution remain [roadmap items](roadmap.md). Stored network settings migrate in
+memory across schema versions and are not rewritten in NVS. Local command admission
 is implemented and defaults to an idle, remote-rejected ingress. OTA partitions are reserved in the
 root firmware, but an updater is not implemented. Cluster coordination and robot
 motion algorithms are not included.

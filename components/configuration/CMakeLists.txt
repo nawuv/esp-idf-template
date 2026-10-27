@@ -1,6 +1,6 @@
-set(portable_sources "src/network_config.cpp")
+set(portable_sources "src/network_config.cpp" "src/settings_migration.cpp")
 if(COMMAND idf_component_register)
-    idf_component_register(SRCS ${portable_sources} "src/nvs_config.cpp" INCLUDE_DIRS "include" PRIV_REQUIRES nvs_flash)
+    idf_component_register(SRCS ${portable_sources} "src/nvs_config.cpp" INCLUDE_DIRS "include" PRIV_REQUIRES nvs_flash log)
 else()
     add_library(configuration STATIC ${portable_sources})
     target_include_directories(configuration PUBLIC include)

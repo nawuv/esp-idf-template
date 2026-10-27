@@ -35,6 +35,9 @@ class ProvisionTests(unittest.TestCase):
             rows = list(csv.reader(stream))
         self.assertIn(['wifi_ssid', 'data', 'string', 'lab,"sensor"'], rows)
         self.assertIn(['schema', 'data', 'u8', '1'], rows)
+        self.assertEqual([row[0] for row in rows],
+                         ['key', 'espkit', 'schema', *module.LIMITS])
+        self.assertEqual(module.SCHEMA_VERSION, 1)
         self.assertEqual(os.stat(output).st_mode & 0o777, 0o600)
 
     def test_rejects_topic_injection(self):
